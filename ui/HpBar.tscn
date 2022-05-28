@@ -1,0 +1,89 @@
+[gd_scene load_steps=4 format=2]
+
+[ext_resource path="res://ui/HpBar.gd" type="Script" id=1]
+
+[sub_resource type="Shader" id=3]
+code = "shader_type canvas_item;
+
+uniform vec4 base_color: hint_color = vec4(1.0, 0.2, 0.1, 1.0);
+uniform vec2 resolution = vec2(492.0, 40.0);
+
+float rect(vec2 uv, vec2 size) {
+    float blur = 0.000;
+    // 让 size 成正比
+    size = 0.5 - size * 0.5;
+    // 先画一边
+    vec2 r = vec2(step(size.x, uv.x), step(size.y, uv.y));
+    // 再画相反的边，相乘得出相交位置就是对应的矩形
+    r *= vec2(step(size.x, 1.0 - uv.x), step(size.y, 1.0 - uv.y));
+    // x 和 y 相乘得出矩形的像素点值
+    return r.x * r.y;
+}
+
+float circle(vec2 uv, float r, vec2 arg_resoulation) {
+    uv -= 0.5;
+//	resolution = vec2(492, 40);	
+//    uv.x *= iResolution.x / iResolution.y;
+	uv.x *= arg_resoulation.x / arg_resoulation.y;
+    float blur = 0.005;
+    
+    // 用 uv 做长度,点距离零点的距离会呈圆形递增
+    float d = length(uv);
+    d = step(d, r);
+    return d;
+}
+
+float round_rect(vec2 uv, vec2 arg_resoulation) {    
+    float radius = 0.5;
+    float c1 = circle(vec2(uv.x+0.45, uv.y), radius, arg_resoulation);
+    float c2 = circle(vec2(uv.x-0.45, uv.y), radius, arg_resoulation);
+    
+//    float r = rect(vec2(uv.x, uv.y), vec2(size.x-radius, size.y));
+    float r = rect(vec2(uv.x, uv.y), vec2(0.9, 1.0));
+	
+	float res = c1+c2+r;
+//	float res = r;
+
+    return min(res, 1.0);
+}
+
+void fragment()
+{
+    // Normalized pixel coordinates (from 0 to 1)
+    vec2 uv = UV;
+    
+	
+	vec4 col = base_color;
+    
+    vec2 size = vec2(1.0, 1.0);
+    
+    
+    float t = round_rect(uv, resolution);
+    col.a = t;
+    
+    // highlight
+    float hy = uv.y;
+    hy += sin(TIME*6.+uv.x*12.0) * sin(TIME*3.0) * 0.2;
+    float highlight = smoothstep(0.6, 0.6, hy);
+    highlight *= 3.0;
+    if (hy <= 0.3) {
+        col.rgb *= 1.5;
+    }
+       
+
+    // Output to screen
+    COLOR = col;
+}"
+
+[sub_resource type="ShaderMaterial" id=2]
+shader = SubResource( 3 )
+shader_param/base_color = Color( 0.763672, 0.207974, 0.207974, 1 )
+shader_param/resolution = Vector2( 490, 48 )
+
+[node name="HpBar" type="ColorRect"]
+material = SubResource( 2 )
+margin_left = 70.0
+margin_top = 31.0
+margin_right = 550.0
+margin_bottom = 79.0
+script = ExtResource( 1 )

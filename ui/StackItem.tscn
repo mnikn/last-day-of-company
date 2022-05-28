@@ -1,0 +1,96 @@
+[gd_scene load_steps=6 format=2]
+
+[ext_resource path="res://assets/fonts/GlowSansJ-Normal-Medium.otf" type="DynamicFontData" id=1]
+[ext_resource path="res://ui/StackItem.gd" type="Script" id=2]
+
+[sub_resource type="Shader" id=32]
+code = "shader_type canvas_item;
+
+uniform vec4 base_col: hint_color = vec4(0.27, 0.14, 0.05, 1.0);
+uniform vec2 resolution = vec2(256.0, 64.0);
+uniform float radius = 0.1;
+
+float sat(float t) {
+    return clamp(t, 0.0, 1.0);
+}
+
+float remap01(float a, float b, float t) {
+    return sat((t - a) / (b - a));
+}
+
+float remap(float a, float b, float c, float d, float t) {
+    return remap01(a, b, t) * (d - c) + c;
+}
+
+float rect(vec2 uv, vec2 size) {
+    float blur = 0.000;
+    // 让 size 成正比
+    size = 0.5 - size * 0.5;
+    // 先画一边
+    vec2 r = vec2(step(size.x, uv.x), step(size.y, uv.y));
+    // 再画相反的边，相乘得出相交位置就是对应的矩形
+    r *= vec2(step(size.x, 1.0 - uv.x), step(size.y, 1.0 - uv.y));
+    // x 和 y 相乘得出矩形的像素点值
+    return r.x * r.y;
+}
+
+float circle(vec2 uv, float r) {
+    uv -= 0.5;
+    uv.x *= resolution.x / resolution.y;
+    float blur = 0.005;
+    
+    // 用 uv 做长度,点距离零点的距离会呈圆形递增
+    float d = length(uv);
+    d = step(d, r);
+    return d;
+}
+
+
+float round_rect(vec2 uv, float r) {
+	float c1 = circle(uv+0.5-r, r);
+	float c2 = circle(uv-0.5+r, r);
+	float c3 = circle(vec2(uv.x+0.5-r, uv.y-0.5+r), r);
+	float c4 = circle(vec2(uv.x-0.5+r, uv.y+0.5-r), r);
+
+	float rect1 = rect(uv, vec2(1.0 - r * 1.47, 1.0 - r * 2.0));
+	float rect2 = rect(uv, vec2(1.0- r *2.0, 1.0));
+
+	float s = min(c1+c2+c3+c4+rect1+rect2, 1.0);
+	return s;
+}
+
+void fragment() {
+	vec4 col = base_col;
+	vec2 uv = UV;
+
+	float s = round_rect(uv, radius);
+	col.a = s;
+	
+	COLOR = col;
+}"
+
+[sub_resource type="ShaderMaterial" id=33]
+resource_local_to_scene = true
+shader = SubResource( 32 )
+shader_param/base_col = Color( 0.419608, 0.188235, 0.109804, 1 )
+shader_param/resolution = Vector2( 120, 32 )
+shader_param/radius = 0.1
+
+[sub_resource type="DynamicFont" id=34]
+font_data = ExtResource( 1 )
+
+[node name="StackItem" type="ColorRect"]
+material = SubResource( 33 )
+margin_top = 6.0
+margin_right = 120.0
+margin_bottom = 38.0
+rect_min_size = Vector2( 0, 32 )
+script = ExtResource( 2 )
+
+[node name="Label" type="Label" parent="."]
+anchor_right = 1.0
+anchor_bottom = 1.0
+custom_fonts/font = SubResource( 34 )
+text = "Reason"
+align = 1
+valign = 1

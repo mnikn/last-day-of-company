@@ -1,0 +1,1830 @@
+[gd_scene load_steps=50 format=2]
+
+[ext_resource path="res://ui/BgBlock.tscn" type="PackedScene" id=1]
+[ext_resource path="res://assets/ui/scene/scene.png" type="Texture" id=2]
+[ext_resource path="res://ui/HpBar.tscn" type="PackedScene" id=3]
+[ext_resource path="res://assets/ui/portrait/main_character.png" type="Texture" id=4]
+[ext_resource path="res://assets/ui/portrait/normal_ghost.png" type="Texture" id=5]
+[ext_resource path="res://assets/fonts/blowbrush.ttf" type="DynamicFontData" id=6]
+[ext_resource path="res://assets/fonts/GlowSansJ-Normal-Medium.otf" type="DynamicFontData" id=7]
+[ext_resource path="res://ui/Action.tscn" type="PackedScene" id=8]
+[ext_resource path="res://ui/StackItem.tscn" type="PackedScene" id=9]
+[ext_resource path="res://assets/ui/sprites/player/idle.png" type="Texture" id=10]
+[ext_resource path="res://assets/ui/sprites/ghost/idle.png" type="Texture" id=11]
+
+[sub_resource type="DynamicFont" id=1]
+size = 64
+outline_size = 2
+outline_color = Color( 0.270588, 0.137255, 0.0509804, 1 )
+font_data = ExtResource( 6 )
+
+[sub_resource type="Shader" id=3]
+code = "shader_type canvas_item;
+
+uniform vec4 base_col: hint_color = vec4(0.27, 0.14, 0.05, 1.0);
+uniform vec2 resolution = vec2(256.0, 64.0);
+uniform float radius = 0.1;
+
+float sat(float t) {
+    return clamp(t, 0.0, 1.0);
+}
+
+float remap01(float a, float b, float t) {
+    return sat((t - a) / (b - a));
+}
+
+float remap(float a, float b, float c, float d, float t) {
+    return remap01(a, b, t) * (d - c) + c;
+}
+
+float rect(vec2 uv, vec2 size) {
+    float blur = 0.000;
+    // 让 size 成正比
+    size = 0.5 - size * 0.5;
+    // 先画一边
+    vec2 r = vec2(step(size.x, uv.x), step(size.y, uv.y));
+    // 再画相反的边，相乘得出相交位置就是对应的矩形
+    r *= vec2(step(size.x, 1.0 - uv.x), step(size.y, 1.0 - uv.y));
+    // x 和 y 相乘得出矩形的像素点值
+    return r.x * r.y;
+}
+
+float circle(vec2 uv, float r) {
+    uv -= 0.5;
+    uv.x *= resolution.x / resolution.y;
+    float blur = 0.005;
+    
+    // 用 uv 做长度,点距离零点的距离会呈圆形递增
+    float d = length(uv);
+    d = step(d, r);
+    return d;
+}
+
+
+float round_rect(vec2 uv, float r) {
+	float c1 = circle(uv+0.5-r, r);
+	float c2 = circle(uv-0.5+r, r);
+	float c3 = circle(vec2(uv.x+0.5-r, uv.y-0.5+r), r);
+	float c4 = circle(vec2(uv.x-0.5+r, uv.y+0.5-r), r);
+
+	float rect1 = rect(uv, vec2(1.0 - r * 1.5, 1.0 - r * 2.0));
+	float rect2 = rect(uv, vec2(1.0- r *2.0, 1.0));
+
+	float s = min(c1+c2+c3+c4+rect1+rect2, 1.0);
+	return s;
+}
+
+void fragment() {
+	vec4 col = base_col;
+	vec2 uv = UV;
+
+	float s = round_rect(uv, radius);
+	col.a = s;
+	
+	COLOR = col;
+}"
+
+[sub_resource type="ShaderMaterial" id=4]
+shader = SubResource( 3 )
+shader_param/base_col = Color( 0.270588, 0.137255, 0.0509804, 1 )
+shader_param/resolution = Vector2( 256, 64 )
+shader_param/radius = 0.1
+
+[sub_resource type="DynamicFont" id=29]
+size = 24
+font_data = ExtResource( 7 )
+
+[sub_resource type="Shader" id=58]
+code = "shader_type canvas_item;
+
+uniform vec4 base_col: hint_color = vec4(0.27, 0.14, 0.05, 1.0);
+uniform vec2 resolution = vec2(256.0, 64.0);
+uniform bool flip = false;
+
+const float PI = 3.1415;
+
+float sat(float t) {
+    return clamp(t, 0.0, 1.0);
+}
+
+float remap01(float a, float b, float t) {
+    return sat((t - a) / (b - a));
+}
+
+float remap(float a, float b, float c, float d, float t) {
+    return remap01(a, b, t) * (d - c) + c;
+}
+
+float polygon(vec2 position, float radius, float sides){
+	position = position * 2.0 - 1.0;
+	float angle = atan(position.x, position.y);
+	float slice = PI * 2.0 / sides;
+
+	return step(radius, cos(floor(0.5 + angle / slice) * slice - angle) * length(position));
+}
+
+//vec4 rotate(float angle){
+//	return vec4(cos(angle), -sin(angle), sin(angle), cos(angle));
+//}
+
+mat2 rotate(float angle){
+	return mat2(vec2(cos(angle), -sin(angle)), vec2(sin(angle), cos(angle)));
+}
+
+vec2 rotateUVmatrinx(vec2 uv, vec2 pivot, float rotation){
+    mat2 rotation_matrix=mat2(  vec2(sin(rotation),-cos(rotation)),
+                                vec2(cos(rotation),sin(rotation))
+                                );
+    uv -= pivot;
+    uv= uv*rotation_matrix;
+    uv += pivot;
+    return uv;
+}
+
+float rect(vec2 uv, vec2 size) {
+    float blur = 0.000;
+    // 让 size 成正比
+    size = 0.5 - size * 0.5;
+    // 先画一边
+    vec2 r = vec2(step(size.x, uv.x), step(size.y, uv.y));
+    // 再画相反的边，相乘得出相交位置就是对应的矩形
+    r *= vec2(step(size.x, 1.0 - uv.x), step(size.y, 1.0 - uv.y));
+    // x 和 y 相乘得出矩形的像素点值
+    return r.x * r.y;
+}
+
+float circle(vec2 uv, float r) {
+    uv -= 0.5;
+    uv.x *= resolution.x / resolution.y;
+    float blur = 0.005;
+    
+    // 用 uv 做长度,点距离零点的距离会呈圆形递增
+    float d = length(uv);
+    d = step(d, r);
+    return d;
+}
+
+
+void fragment() {
+	vec4 col = base_col;
+	vec2 uv = UV;
+//	uv.x *= -1.0;
+	if (flip) {
+		uv.x = 1.0 - abs(uv.x);
+	}
+	
+//    uv = rotateUVmatrinx(uv, vec2(0.5), -45.03);
+//	uv = rotateUVmatrinx(UV, vec2(0.52), TIME);
+//	uv.x *= -1.0;
+	float s = rect(vec2(uv.x+0.2,uv.y), vec2(1.0));
+	
+	uv -= vec2(0.5);
+	uv = rotate(1.57) * uv;
+	uv += vec2(0.5);
+	s += 1.0 - polygon(vec2(uv.x*0.15+0.2,uv.y+0.45), 0.4, 3);
+	s = min(s, 1.0);
+	col.a = s;
+	
+	COLOR = col;
+}"
+
+[sub_resource type="ShaderMaterial" id=59]
+resource_local_to_scene = true
+shader = SubResource( 58 )
+shader_param/base_col = Color( 0.419608, 0.188235, 0.109804, 1 )
+shader_param/resolution = Vector2( 256, 64 )
+shader_param/flip = false
+
+[sub_resource type="Shader" id=60]
+code = "shader_type canvas_item;
+
+uniform vec4 base_col: hint_color = vec4(0.27, 0.14, 0.05, 1.0);
+uniform vec2 resolution = vec2(256.0, 64.0);
+uniform bool flip = false;
+
+const float PI = 3.1415;
+
+float sat(float t) {
+    return clamp(t, 0.0, 1.0);
+}
+
+float remap01(float a, float b, float t) {
+    return sat((t - a) / (b - a));
+}
+
+float remap(float a, float b, float c, float d, float t) {
+    return remap01(a, b, t) * (d - c) + c;
+}
+
+float polygon(vec2 position, float radius, float sides){
+	position = position * 2.0 - 1.0;
+	float angle = atan(position.x, position.y);
+	float slice = PI * 2.0 / sides;
+
+	return step(radius, cos(floor(0.5 + angle / slice) * slice - angle) * length(position));
+}
+
+//vec4 rotate(float angle){
+//	return vec4(cos(angle), -sin(angle), sin(angle), cos(angle));
+//}
+
+mat2 rotate(float angle){
+	return mat2(vec2(cos(angle), -sin(angle)), vec2(sin(angle), cos(angle)));
+}
+
+vec2 rotateUVmatrinx(vec2 uv, vec2 pivot, float rotation){
+    mat2 rotation_matrix=mat2(  vec2(sin(rotation),-cos(rotation)),
+                                vec2(cos(rotation),sin(rotation))
+                                );
+    uv -= pivot;
+    uv= uv*rotation_matrix;
+    uv += pivot;
+    return uv;
+}
+
+float rect(vec2 uv, vec2 size) {
+    float blur = 0.000;
+    // 让 size 成正比
+    size = 0.5 - size * 0.5;
+    // 先画一边
+    vec2 r = vec2(step(size.x, uv.x), step(size.y, uv.y));
+    // 再画相反的边，相乘得出相交位置就是对应的矩形
+    r *= vec2(step(size.x, 1.0 - uv.x), step(size.y, 1.0 - uv.y));
+    // x 和 y 相乘得出矩形的像素点值
+    return r.x * r.y;
+}
+
+float circle(vec2 uv, float r) {
+    uv -= 0.5;
+    uv.x *= resolution.x / resolution.y;
+    float blur = 0.005;
+    
+    // 用 uv 做长度,点距离零点的距离会呈圆形递增
+    float d = length(uv);
+    d = step(d, r);
+    return d;
+}
+
+
+void fragment() {
+	vec4 col = base_col;
+	vec2 uv = UV;
+//	uv.x *= -1.0;
+	if (flip) {
+		uv.x = 1.0 - abs(uv.x);
+	}
+	
+//    uv = rotateUVmatrinx(uv, vec2(0.5), -45.03);
+//	uv = rotateUVmatrinx(UV, vec2(0.52), TIME);
+//	uv.x *= -1.0;
+	float s = rect(vec2(uv.x+0.2,uv.y), vec2(1.0));
+	
+	uv -= vec2(0.5);
+	uv = rotate(1.57) * uv;
+	uv += vec2(0.5);
+	s += 1.0 - polygon(vec2(uv.x*0.15+0.2,uv.y+0.45), 0.4, 3);
+	s = min(s, 1.0);
+	col.a = s;
+	
+	COLOR = col;
+}"
+
+[sub_resource type="ShaderMaterial" id=61]
+resource_local_to_scene = true
+shader = SubResource( 60 )
+shader_param/base_col = Color( 0.419608, 0.188235, 0.109804, 1 )
+shader_param/resolution = Vector2( 256, 64 )
+shader_param/flip = false
+
+[sub_resource type="Shader" id=62]
+code = "shader_type canvas_item;
+
+uniform vec4 base_col: hint_color = vec4(0.27, 0.14, 0.05, 1.0);
+uniform vec2 resolution = vec2(256.0, 64.0);
+uniform bool flip = false;
+
+const float PI = 3.1415;
+
+float sat(float t) {
+    return clamp(t, 0.0, 1.0);
+}
+
+float remap01(float a, float b, float t) {
+    return sat((t - a) / (b - a));
+}
+
+float remap(float a, float b, float c, float d, float t) {
+    return remap01(a, b, t) * (d - c) + c;
+}
+
+float polygon(vec2 position, float radius, float sides){
+	position = position * 2.0 - 1.0;
+	float angle = atan(position.x, position.y);
+	float slice = PI * 2.0 / sides;
+
+	return step(radius, cos(floor(0.5 + angle / slice) * slice - angle) * length(position));
+}
+
+//vec4 rotate(float angle){
+//	return vec4(cos(angle), -sin(angle), sin(angle), cos(angle));
+//}
+
+mat2 rotate(float angle){
+	return mat2(vec2(cos(angle), -sin(angle)), vec2(sin(angle), cos(angle)));
+}
+
+vec2 rotateUVmatrinx(vec2 uv, vec2 pivot, float rotation){
+    mat2 rotation_matrix=mat2(  vec2(sin(rotation),-cos(rotation)),
+                                vec2(cos(rotation),sin(rotation))
+                                );
+    uv -= pivot;
+    uv= uv*rotation_matrix;
+    uv += pivot;
+    return uv;
+}
+
+float rect(vec2 uv, vec2 size) {
+    float blur = 0.000;
+    // 让 size 成正比
+    size = 0.5 - size * 0.5;
+    // 先画一边
+    vec2 r = vec2(step(size.x, uv.x), step(size.y, uv.y));
+    // 再画相反的边，相乘得出相交位置就是对应的矩形
+    r *= vec2(step(size.x, 1.0 - uv.x), step(size.y, 1.0 - uv.y));
+    // x 和 y 相乘得出矩形的像素点值
+    return r.x * r.y;
+}
+
+float circle(vec2 uv, float r) {
+    uv -= 0.5;
+    uv.x *= resolution.x / resolution.y;
+    float blur = 0.005;
+    
+    // 用 uv 做长度,点距离零点的距离会呈圆形递增
+    float d = length(uv);
+    d = step(d, r);
+    return d;
+}
+
+
+void fragment() {
+	vec4 col = base_col;
+	vec2 uv = UV;
+//	uv.x *= -1.0;
+	if (flip) {
+		uv.x = 1.0 - abs(uv.x);
+	}
+	
+//    uv = rotateUVmatrinx(uv, vec2(0.5), -45.03);
+//	uv = rotateUVmatrinx(UV, vec2(0.52), TIME);
+//	uv.x *= -1.0;
+	float s = rect(vec2(uv.x+0.2,uv.y), vec2(1.0));
+	
+	uv -= vec2(0.5);
+	uv = rotate(1.57) * uv;
+	uv += vec2(0.5);
+	s += 1.0 - polygon(vec2(uv.x*0.15+0.2,uv.y+0.45), 0.4, 3);
+	s = min(s, 1.0);
+	col.a = s;
+	
+	COLOR = col;
+}"
+
+[sub_resource type="ShaderMaterial" id=63]
+resource_local_to_scene = true
+shader = SubResource( 62 )
+shader_param/base_col = Color( 0.419608, 0.188235, 0.109804, 1 )
+shader_param/resolution = Vector2( 256, 64 )
+shader_param/flip = false
+
+[sub_resource type="Shader" id=64]
+code = "shader_type canvas_item;
+
+uniform vec4 base_col: hint_color = vec4(0.27, 0.14, 0.05, 1.0);
+uniform vec2 resolution = vec2(256.0, 64.0);
+uniform bool flip = false;
+
+const float PI = 3.1415;
+
+float sat(float t) {
+    return clamp(t, 0.0, 1.0);
+}
+
+float remap01(float a, float b, float t) {
+    return sat((t - a) / (b - a));
+}
+
+float remap(float a, float b, float c, float d, float t) {
+    return remap01(a, b, t) * (d - c) + c;
+}
+
+float polygon(vec2 position, float radius, float sides){
+	position = position * 2.0 - 1.0;
+	float angle = atan(position.x, position.y);
+	float slice = PI * 2.0 / sides;
+
+	return step(radius, cos(floor(0.5 + angle / slice) * slice - angle) * length(position));
+}
+
+//vec4 rotate(float angle){
+//	return vec4(cos(angle), -sin(angle), sin(angle), cos(angle));
+//}
+
+mat2 rotate(float angle){
+	return mat2(vec2(cos(angle), -sin(angle)), vec2(sin(angle), cos(angle)));
+}
+
+vec2 rotateUVmatrinx(vec2 uv, vec2 pivot, float rotation){
+    mat2 rotation_matrix=mat2(  vec2(sin(rotation),-cos(rotation)),
+                                vec2(cos(rotation),sin(rotation))
+                                );
+    uv -= pivot;
+    uv= uv*rotation_matrix;
+    uv += pivot;
+    return uv;
+}
+
+float rect(vec2 uv, vec2 size) {
+    float blur = 0.000;
+    // 让 size 成正比
+    size = 0.5 - size * 0.5;
+    // 先画一边
+    vec2 r = vec2(step(size.x, uv.x), step(size.y, uv.y));
+    // 再画相反的边，相乘得出相交位置就是对应的矩形
+    r *= vec2(step(size.x, 1.0 - uv.x), step(size.y, 1.0 - uv.y));
+    // x 和 y 相乘得出矩形的像素点值
+    return r.x * r.y;
+}
+
+float circle(vec2 uv, float r) {
+    uv -= 0.5;
+    uv.x *= resolution.x / resolution.y;
+    float blur = 0.005;
+    
+    // 用 uv 做长度,点距离零点的距离会呈圆形递增
+    float d = length(uv);
+    d = step(d, r);
+    return d;
+}
+
+
+void fragment() {
+	vec4 col = base_col;
+	vec2 uv = UV;
+//	uv.x *= -1.0;
+	if (flip) {
+		uv.x = 1.0 - abs(uv.x);
+	}
+	
+//    uv = rotateUVmatrinx(uv, vec2(0.5), -45.03);
+//	uv = rotateUVmatrinx(UV, vec2(0.52), TIME);
+//	uv.x *= -1.0;
+	float s = rect(vec2(uv.x+0.2,uv.y), vec2(1.0));
+	
+	uv -= vec2(0.5);
+	uv = rotate(1.57) * uv;
+	uv += vec2(0.5);
+	s += 1.0 - polygon(vec2(uv.x*0.15+0.2,uv.y+0.45), 0.4, 3);
+	s = min(s, 1.0);
+	col.a = s;
+	
+	COLOR = col;
+}"
+
+[sub_resource type="ShaderMaterial" id=65]
+resource_local_to_scene = true
+shader = SubResource( 64 )
+shader_param/base_col = Color( 0.419608, 0.188235, 0.109804, 1 )
+shader_param/resolution = Vector2( 256, 64 )
+shader_param/flip = false
+
+[sub_resource type="Shader" id=66]
+code = "shader_type canvas_item;
+
+uniform vec4 base_col: hint_color = vec4(0.27, 0.14, 0.05, 1.0);
+uniform vec2 resolution = vec2(256.0, 64.0);
+uniform bool flip = false;
+
+const float PI = 3.1415;
+
+float sat(float t) {
+    return clamp(t, 0.0, 1.0);
+}
+
+float remap01(float a, float b, float t) {
+    return sat((t - a) / (b - a));
+}
+
+float remap(float a, float b, float c, float d, float t) {
+    return remap01(a, b, t) * (d - c) + c;
+}
+
+float polygon(vec2 position, float radius, float sides){
+	position = position * 2.0 - 1.0;
+	float angle = atan(position.x, position.y);
+	float slice = PI * 2.0 / sides;
+
+	return step(radius, cos(floor(0.5 + angle / slice) * slice - angle) * length(position));
+}
+
+//vec4 rotate(float angle){
+//	return vec4(cos(angle), -sin(angle), sin(angle), cos(angle));
+//}
+
+mat2 rotate(float angle){
+	return mat2(vec2(cos(angle), -sin(angle)), vec2(sin(angle), cos(angle)));
+}
+
+vec2 rotateUVmatrinx(vec2 uv, vec2 pivot, float rotation){
+    mat2 rotation_matrix=mat2(  vec2(sin(rotation),-cos(rotation)),
+                                vec2(cos(rotation),sin(rotation))
+                                );
+    uv -= pivot;
+    uv= uv*rotation_matrix;
+    uv += pivot;
+    return uv;
+}
+
+float rect(vec2 uv, vec2 size) {
+    float blur = 0.000;
+    // 让 size 成正比
+    size = 0.5 - size * 0.5;
+    // 先画一边
+    vec2 r = vec2(step(size.x, uv.x), step(size.y, uv.y));
+    // 再画相反的边，相乘得出相交位置就是对应的矩形
+    r *= vec2(step(size.x, 1.0 - uv.x), step(size.y, 1.0 - uv.y));
+    // x 和 y 相乘得出矩形的像素点值
+    return r.x * r.y;
+}
+
+float circle(vec2 uv, float r) {
+    uv -= 0.5;
+    uv.x *= resolution.x / resolution.y;
+    float blur = 0.005;
+    
+    // 用 uv 做长度,点距离零点的距离会呈圆形递增
+    float d = length(uv);
+    d = step(d, r);
+    return d;
+}
+
+
+void fragment() {
+	vec4 col = base_col;
+	vec2 uv = UV;
+//	uv.x *= -1.0;
+	if (flip) {
+		uv.x = 1.0 - abs(uv.x);
+	}
+	
+//    uv = rotateUVmatrinx(uv, vec2(0.5), -45.03);
+//	uv = rotateUVmatrinx(UV, vec2(0.52), TIME);
+//	uv.x *= -1.0;
+	float s = rect(vec2(uv.x+0.2,uv.y), vec2(1.0));
+	
+	uv -= vec2(0.5);
+	uv = rotate(1.57) * uv;
+	uv += vec2(0.5);
+	s += 1.0 - polygon(vec2(uv.x*0.15+0.2,uv.y+0.45), 0.4, 3);
+	s = min(s, 1.0);
+	col.a = s;
+	
+	COLOR = col;
+}"
+
+[sub_resource type="ShaderMaterial" id=67]
+resource_local_to_scene = true
+shader = SubResource( 66 )
+shader_param/base_col = Color( 0.419608, 0.188235, 0.109804, 1 )
+shader_param/resolution = Vector2( 256, 64 )
+shader_param/flip = false
+
+[sub_resource type="Shader" id=68]
+code = "shader_type canvas_item;
+
+uniform vec4 base_col: hint_color = vec4(0.27, 0.14, 0.05, 1.0);
+uniform vec2 resolution = vec2(256.0, 64.0);
+uniform bool flip = false;
+
+const float PI = 3.1415;
+
+float sat(float t) {
+    return clamp(t, 0.0, 1.0);
+}
+
+float remap01(float a, float b, float t) {
+    return sat((t - a) / (b - a));
+}
+
+float remap(float a, float b, float c, float d, float t) {
+    return remap01(a, b, t) * (d - c) + c;
+}
+
+float polygon(vec2 position, float radius, float sides){
+	position = position * 2.0 - 1.0;
+	float angle = atan(position.x, position.y);
+	float slice = PI * 2.0 / sides;
+
+	return step(radius, cos(floor(0.5 + angle / slice) * slice - angle) * length(position));
+}
+
+//vec4 rotate(float angle){
+//	return vec4(cos(angle), -sin(angle), sin(angle), cos(angle));
+//}
+
+mat2 rotate(float angle){
+	return mat2(vec2(cos(angle), -sin(angle)), vec2(sin(angle), cos(angle)));
+}
+
+vec2 rotateUVmatrinx(vec2 uv, vec2 pivot, float rotation){
+    mat2 rotation_matrix=mat2(  vec2(sin(rotation),-cos(rotation)),
+                                vec2(cos(rotation),sin(rotation))
+                                );
+    uv -= pivot;
+    uv= uv*rotation_matrix;
+    uv += pivot;
+    return uv;
+}
+
+float rect(vec2 uv, vec2 size) {
+    float blur = 0.000;
+    // 让 size 成正比
+    size = 0.5 - size * 0.5;
+    // 先画一边
+    vec2 r = vec2(step(size.x, uv.x), step(size.y, uv.y));
+    // 再画相反的边，相乘得出相交位置就是对应的矩形
+    r *= vec2(step(size.x, 1.0 - uv.x), step(size.y, 1.0 - uv.y));
+    // x 和 y 相乘得出矩形的像素点值
+    return r.x * r.y;
+}
+
+float circle(vec2 uv, float r) {
+    uv -= 0.5;
+    uv.x *= resolution.x / resolution.y;
+    float blur = 0.005;
+    
+    // 用 uv 做长度,点距离零点的距离会呈圆形递增
+    float d = length(uv);
+    d = step(d, r);
+    return d;
+}
+
+
+void fragment() {
+	vec4 col = base_col;
+	vec2 uv = UV;
+//	uv.x *= -1.0;
+	if (flip) {
+		uv.x = 1.0 - abs(uv.x);
+	}
+	
+//    uv = rotateUVmatrinx(uv, vec2(0.5), -45.03);
+//	uv = rotateUVmatrinx(UV, vec2(0.52), TIME);
+//	uv.x *= -1.0;
+	float s = rect(vec2(uv.x+0.2,uv.y), vec2(1.0));
+	
+	uv -= vec2(0.5);
+	uv = rotate(1.57) * uv;
+	uv += vec2(0.5);
+	s += 1.0 - polygon(vec2(uv.x*0.15+0.2,uv.y+0.45), 0.4, 3);
+	s = min(s, 1.0);
+	col.a = s;
+	
+	COLOR = col;
+}"
+
+[sub_resource type="ShaderMaterial" id=69]
+resource_local_to_scene = true
+shader = SubResource( 68 )
+shader_param/base_col = Color( 0.937255, 0.717647, 0.458824, 1 )
+shader_param/resolution = Vector2( 256, 64 )
+shader_param/flip = false
+
+[sub_resource type="Shader" id=70]
+code = "shader_type canvas_item;
+
+uniform vec4 base_col: hint_color = vec4(0.27, 0.14, 0.05, 1.0);
+uniform vec2 resolution = vec2(256.0, 64.0);
+uniform bool flip = false;
+
+const float PI = 3.1415;
+
+float sat(float t) {
+    return clamp(t, 0.0, 1.0);
+}
+
+float remap01(float a, float b, float t) {
+    return sat((t - a) / (b - a));
+}
+
+float remap(float a, float b, float c, float d, float t) {
+    return remap01(a, b, t) * (d - c) + c;
+}
+
+float polygon(vec2 position, float radius, float sides){
+	position = position * 2.0 - 1.0;
+	float angle = atan(position.x, position.y);
+	float slice = PI * 2.0 / sides;
+
+	return step(radius, cos(floor(0.5 + angle / slice) * slice - angle) * length(position));
+}
+
+//vec4 rotate(float angle){
+//	return vec4(cos(angle), -sin(angle), sin(angle), cos(angle));
+//}
+
+mat2 rotate(float angle){
+	return mat2(vec2(cos(angle), -sin(angle)), vec2(sin(angle), cos(angle)));
+}
+
+vec2 rotateUVmatrinx(vec2 uv, vec2 pivot, float rotation){
+    mat2 rotation_matrix=mat2(  vec2(sin(rotation),-cos(rotation)),
+                                vec2(cos(rotation),sin(rotation))
+                                );
+    uv -= pivot;
+    uv= uv*rotation_matrix;
+    uv += pivot;
+    return uv;
+}
+
+float rect(vec2 uv, vec2 size) {
+    float blur = 0.000;
+    // 让 size 成正比
+    size = 0.5 - size * 0.5;
+    // 先画一边
+    vec2 r = vec2(step(size.x, uv.x), step(size.y, uv.y));
+    // 再画相反的边，相乘得出相交位置就是对应的矩形
+    r *= vec2(step(size.x, 1.0 - uv.x), step(size.y, 1.0 - uv.y));
+    // x 和 y 相乘得出矩形的像素点值
+    return r.x * r.y;
+}
+
+float circle(vec2 uv, float r) {
+    uv -= 0.5;
+    uv.x *= resolution.x / resolution.y;
+    float blur = 0.005;
+    
+    // 用 uv 做长度,点距离零点的距离会呈圆形递增
+    float d = length(uv);
+    d = step(d, r);
+    return d;
+}
+
+
+void fragment() {
+	vec4 col = base_col;
+	vec2 uv = UV;
+//	uv.x *= -1.0;
+	if (flip) {
+		uv.x = 1.0 - abs(uv.x);
+	}
+	
+//    uv = rotateUVmatrinx(uv, vec2(0.5), -45.03);
+//	uv = rotateUVmatrinx(UV, vec2(0.52), TIME);
+//	uv.x *= -1.0;
+	float s = rect(vec2(uv.x+0.2,uv.y), vec2(1.0));
+	
+	uv -= vec2(0.5);
+	uv = rotate(1.57) * uv;
+	uv += vec2(0.5);
+	s += 1.0 - polygon(vec2(uv.x*0.15+0.2,uv.y+0.45), 0.4, 3);
+	s = min(s, 1.0);
+	col.a = s;
+	
+	COLOR = col;
+}"
+
+[sub_resource type="ShaderMaterial" id=71]
+shader = SubResource( 70 )
+shader_param/base_col = Color( 0.419608, 0.188235, 0.109804, 1 )
+shader_param/resolution = Vector2( 256, 64 )
+shader_param/flip = true
+
+[sub_resource type="Shader" id=72]
+code = "shader_type canvas_item;
+
+uniform vec4 base_col: hint_color = vec4(0.27, 0.14, 0.05, 1.0);
+uniform vec2 resolution = vec2(256.0, 64.0);
+uniform bool flip = false;
+
+const float PI = 3.1415;
+
+float sat(float t) {
+    return clamp(t, 0.0, 1.0);
+}
+
+float remap01(float a, float b, float t) {
+    return sat((t - a) / (b - a));
+}
+
+float remap(float a, float b, float c, float d, float t) {
+    return remap01(a, b, t) * (d - c) + c;
+}
+
+float polygon(vec2 position, float radius, float sides){
+	position = position * 2.0 - 1.0;
+	float angle = atan(position.x, position.y);
+	float slice = PI * 2.0 / sides;
+
+	return step(radius, cos(floor(0.5 + angle / slice) * slice - angle) * length(position));
+}
+
+//vec4 rotate(float angle){
+//	return vec4(cos(angle), -sin(angle), sin(angle), cos(angle));
+//}
+
+mat2 rotate(float angle){
+	return mat2(vec2(cos(angle), -sin(angle)), vec2(sin(angle), cos(angle)));
+}
+
+vec2 rotateUVmatrinx(vec2 uv, vec2 pivot, float rotation){
+    mat2 rotation_matrix=mat2(  vec2(sin(rotation),-cos(rotation)),
+                                vec2(cos(rotation),sin(rotation))
+                                );
+    uv -= pivot;
+    uv= uv*rotation_matrix;
+    uv += pivot;
+    return uv;
+}
+
+float rect(vec2 uv, vec2 size) {
+    float blur = 0.000;
+    // 让 size 成正比
+    size = 0.5 - size * 0.5;
+    // 先画一边
+    vec2 r = vec2(step(size.x, uv.x), step(size.y, uv.y));
+    // 再画相反的边，相乘得出相交位置就是对应的矩形
+    r *= vec2(step(size.x, 1.0 - uv.x), step(size.y, 1.0 - uv.y));
+    // x 和 y 相乘得出矩形的像素点值
+    return r.x * r.y;
+}
+
+float circle(vec2 uv, float r) {
+    uv -= 0.5;
+    uv.x *= resolution.x / resolution.y;
+    float blur = 0.005;
+    
+    // 用 uv 做长度,点距离零点的距离会呈圆形递增
+    float d = length(uv);
+    d = step(d, r);
+    return d;
+}
+
+
+void fragment() {
+	vec4 col = base_col;
+	vec2 uv = UV;
+//	uv.x *= -1.0;
+	if (flip) {
+		uv.x = 1.0 - abs(uv.x);
+	}
+	
+//    uv = rotateUVmatrinx(uv, vec2(0.5), -45.03);
+//	uv = rotateUVmatrinx(UV, vec2(0.52), TIME);
+//	uv.x *= -1.0;
+	float s = rect(vec2(uv.x+0.2,uv.y), vec2(1.0));
+	
+	uv -= vec2(0.5);
+	uv = rotate(1.57) * uv;
+	uv += vec2(0.5);
+	s += 1.0 - polygon(vec2(uv.x*0.15+0.2,uv.y+0.45), 0.4, 3);
+	s = min(s, 1.0);
+	col.a = s;
+	
+	COLOR = col;
+}"
+
+[sub_resource type="ShaderMaterial" id=73]
+shader = SubResource( 72 )
+shader_param/base_col = Color( 0.419608, 0.188235, 0.109804, 1 )
+shader_param/resolution = Vector2( 256, 64 )
+shader_param/flip = true
+
+[sub_resource type="Shader" id=74]
+code = "shader_type canvas_item;
+
+uniform vec4 base_col: hint_color = vec4(0.27, 0.14, 0.05, 1.0);
+uniform vec2 resolution = vec2(256.0, 64.0);
+uniform bool flip = false;
+
+const float PI = 3.1415;
+
+float sat(float t) {
+    return clamp(t, 0.0, 1.0);
+}
+
+float remap01(float a, float b, float t) {
+    return sat((t - a) / (b - a));
+}
+
+float remap(float a, float b, float c, float d, float t) {
+    return remap01(a, b, t) * (d - c) + c;
+}
+
+float polygon(vec2 position, float radius, float sides){
+	position = position * 2.0 - 1.0;
+	float angle = atan(position.x, position.y);
+	float slice = PI * 2.0 / sides;
+
+	return step(radius, cos(floor(0.5 + angle / slice) * slice - angle) * length(position));
+}
+
+//vec4 rotate(float angle){
+//	return vec4(cos(angle), -sin(angle), sin(angle), cos(angle));
+//}
+
+mat2 rotate(float angle){
+	return mat2(vec2(cos(angle), -sin(angle)), vec2(sin(angle), cos(angle)));
+}
+
+vec2 rotateUVmatrinx(vec2 uv, vec2 pivot, float rotation){
+    mat2 rotation_matrix=mat2(  vec2(sin(rotation),-cos(rotation)),
+                                vec2(cos(rotation),sin(rotation))
+                                );
+    uv -= pivot;
+    uv= uv*rotation_matrix;
+    uv += pivot;
+    return uv;
+}
+
+float rect(vec2 uv, vec2 size) {
+    float blur = 0.000;
+    // 让 size 成正比
+    size = 0.5 - size * 0.5;
+    // 先画一边
+    vec2 r = vec2(step(size.x, uv.x), step(size.y, uv.y));
+    // 再画相反的边，相乘得出相交位置就是对应的矩形
+    r *= vec2(step(size.x, 1.0 - uv.x), step(size.y, 1.0 - uv.y));
+    // x 和 y 相乘得出矩形的像素点值
+    return r.x * r.y;
+}
+
+float circle(vec2 uv, float r) {
+    uv -= 0.5;
+    uv.x *= resolution.x / resolution.y;
+    float blur = 0.005;
+    
+    // 用 uv 做长度,点距离零点的距离会呈圆形递增
+    float d = length(uv);
+    d = step(d, r);
+    return d;
+}
+
+
+void fragment() {
+	vec4 col = base_col;
+	vec2 uv = UV;
+//	uv.x *= -1.0;
+	if (flip) {
+		uv.x = 1.0 - abs(uv.x);
+	}
+	
+//    uv = rotateUVmatrinx(uv, vec2(0.5), -45.03);
+//	uv = rotateUVmatrinx(UV, vec2(0.52), TIME);
+//	uv.x *= -1.0;
+	float s = rect(vec2(uv.x+0.2,uv.y), vec2(1.0));
+	
+	uv -= vec2(0.5);
+	uv = rotate(1.57) * uv;
+	uv += vec2(0.5);
+	s += 1.0 - polygon(vec2(uv.x*0.15+0.2,uv.y+0.45), 0.4, 3);
+	s = min(s, 1.0);
+	col.a = s;
+	
+	COLOR = col;
+}"
+
+[sub_resource type="ShaderMaterial" id=75]
+shader = SubResource( 74 )
+shader_param/base_col = Color( 0.419608, 0.188235, 0.109804, 1 )
+shader_param/resolution = Vector2( 256, 64 )
+shader_param/flip = true
+
+[sub_resource type="Shader" id=76]
+code = "shader_type canvas_item;
+
+uniform vec4 base_col: hint_color = vec4(0.27, 0.14, 0.05, 1.0);
+uniform vec2 resolution = vec2(256.0, 64.0);
+uniform bool flip = false;
+
+const float PI = 3.1415;
+
+float sat(float t) {
+    return clamp(t, 0.0, 1.0);
+}
+
+float remap01(float a, float b, float t) {
+    return sat((t - a) / (b - a));
+}
+
+float remap(float a, float b, float c, float d, float t) {
+    return remap01(a, b, t) * (d - c) + c;
+}
+
+float polygon(vec2 position, float radius, float sides){
+	position = position * 2.0 - 1.0;
+	float angle = atan(position.x, position.y);
+	float slice = PI * 2.0 / sides;
+
+	return step(radius, cos(floor(0.5 + angle / slice) * slice - angle) * length(position));
+}
+
+//vec4 rotate(float angle){
+//	return vec4(cos(angle), -sin(angle), sin(angle), cos(angle));
+//}
+
+mat2 rotate(float angle){
+	return mat2(vec2(cos(angle), -sin(angle)), vec2(sin(angle), cos(angle)));
+}
+
+vec2 rotateUVmatrinx(vec2 uv, vec2 pivot, float rotation){
+    mat2 rotation_matrix=mat2(  vec2(sin(rotation),-cos(rotation)),
+                                vec2(cos(rotation),sin(rotation))
+                                );
+    uv -= pivot;
+    uv= uv*rotation_matrix;
+    uv += pivot;
+    return uv;
+}
+
+float rect(vec2 uv, vec2 size) {
+    float blur = 0.000;
+    // 让 size 成正比
+    size = 0.5 - size * 0.5;
+    // 先画一边
+    vec2 r = vec2(step(size.x, uv.x), step(size.y, uv.y));
+    // 再画相反的边，相乘得出相交位置就是对应的矩形
+    r *= vec2(step(size.x, 1.0 - uv.x), step(size.y, 1.0 - uv.y));
+    // x 和 y 相乘得出矩形的像素点值
+    return r.x * r.y;
+}
+
+float circle(vec2 uv, float r) {
+    uv -= 0.5;
+    uv.x *= resolution.x / resolution.y;
+    float blur = 0.005;
+    
+    // 用 uv 做长度,点距离零点的距离会呈圆形递增
+    float d = length(uv);
+    d = step(d, r);
+    return d;
+}
+
+
+void fragment() {
+	vec4 col = base_col;
+	vec2 uv = UV;
+//	uv.x *= -1.0;
+	if (flip) {
+		uv.x = 1.0 - abs(uv.x);
+	}
+	
+//    uv = rotateUVmatrinx(uv, vec2(0.5), -45.03);
+//	uv = rotateUVmatrinx(UV, vec2(0.52), TIME);
+//	uv.x *= -1.0;
+	float s = rect(vec2(uv.x+0.2,uv.y), vec2(1.0));
+	
+	uv -= vec2(0.5);
+	uv = rotate(1.57) * uv;
+	uv += vec2(0.5);
+	s += 1.0 - polygon(vec2(uv.x*0.15+0.2,uv.y+0.45), 0.4, 3);
+	s = min(s, 1.0);
+	col.a = s;
+	
+	COLOR = col;
+}"
+
+[sub_resource type="ShaderMaterial" id=77]
+shader = SubResource( 76 )
+shader_param/base_col = Color( 0.419608, 0.188235, 0.109804, 1 )
+shader_param/resolution = Vector2( 256, 64 )
+shader_param/flip = true
+
+[sub_resource type="Shader" id=78]
+code = "shader_type canvas_item;
+
+uniform vec4 base_col: hint_color = vec4(0.27, 0.14, 0.05, 1.0);
+uniform vec2 resolution = vec2(256.0, 64.0);
+uniform bool flip = false;
+
+const float PI = 3.1415;
+
+float sat(float t) {
+    return clamp(t, 0.0, 1.0);
+}
+
+float remap01(float a, float b, float t) {
+    return sat((t - a) / (b - a));
+}
+
+float remap(float a, float b, float c, float d, float t) {
+    return remap01(a, b, t) * (d - c) + c;
+}
+
+float polygon(vec2 position, float radius, float sides){
+	position = position * 2.0 - 1.0;
+	float angle = atan(position.x, position.y);
+	float slice = PI * 2.0 / sides;
+
+	return step(radius, cos(floor(0.5 + angle / slice) * slice - angle) * length(position));
+}
+
+//vec4 rotate(float angle){
+//	return vec4(cos(angle), -sin(angle), sin(angle), cos(angle));
+//}
+
+mat2 rotate(float angle){
+	return mat2(vec2(cos(angle), -sin(angle)), vec2(sin(angle), cos(angle)));
+}
+
+vec2 rotateUVmatrinx(vec2 uv, vec2 pivot, float rotation){
+    mat2 rotation_matrix=mat2(  vec2(sin(rotation),-cos(rotation)),
+                                vec2(cos(rotation),sin(rotation))
+                                );
+    uv -= pivot;
+    uv= uv*rotation_matrix;
+    uv += pivot;
+    return uv;
+}
+
+float rect(vec2 uv, vec2 size) {
+    float blur = 0.000;
+    // 让 size 成正比
+    size = 0.5 - size * 0.5;
+    // 先画一边
+    vec2 r = vec2(step(size.x, uv.x), step(size.y, uv.y));
+    // 再画相反的边，相乘得出相交位置就是对应的矩形
+    r *= vec2(step(size.x, 1.0 - uv.x), step(size.y, 1.0 - uv.y));
+    // x 和 y 相乘得出矩形的像素点值
+    return r.x * r.y;
+}
+
+float circle(vec2 uv, float r) {
+    uv -= 0.5;
+    uv.x *= resolution.x / resolution.y;
+    float blur = 0.005;
+    
+    // 用 uv 做长度,点距离零点的距离会呈圆形递增
+    float d = length(uv);
+    d = step(d, r);
+    return d;
+}
+
+
+void fragment() {
+	vec4 col = base_col;
+	vec2 uv = UV;
+//	uv.x *= -1.0;
+	if (flip) {
+		uv.x = 1.0 - abs(uv.x);
+	}
+	
+//    uv = rotateUVmatrinx(uv, vec2(0.5), -45.03);
+//	uv = rotateUVmatrinx(UV, vec2(0.52), TIME);
+//	uv.x *= -1.0;
+	float s = rect(vec2(uv.x+0.2,uv.y), vec2(1.0));
+	
+	uv -= vec2(0.5);
+	uv = rotate(1.57) * uv;
+	uv += vec2(0.5);
+	s += 1.0 - polygon(vec2(uv.x*0.15+0.2,uv.y+0.45), 0.4, 3);
+	s = min(s, 1.0);
+	col.a = s;
+	
+	COLOR = col;
+}"
+
+[sub_resource type="ShaderMaterial" id=79]
+shader = SubResource( 78 )
+shader_param/base_col = Color( 0.419608, 0.188235, 0.109804, 1 )
+shader_param/resolution = Vector2( 256, 64 )
+shader_param/flip = true
+
+[sub_resource type="Shader" id=80]
+code = "shader_type canvas_item;
+
+uniform vec4 base_col: hint_color = vec4(0.27, 0.14, 0.05, 1.0);
+uniform vec2 resolution = vec2(256.0, 64.0);
+uniform bool flip = false;
+
+const float PI = 3.1415;
+
+float sat(float t) {
+    return clamp(t, 0.0, 1.0);
+}
+
+float remap01(float a, float b, float t) {
+    return sat((t - a) / (b - a));
+}
+
+float remap(float a, float b, float c, float d, float t) {
+    return remap01(a, b, t) * (d - c) + c;
+}
+
+float polygon(vec2 position, float radius, float sides){
+	position = position * 2.0 - 1.0;
+	float angle = atan(position.x, position.y);
+	float slice = PI * 2.0 / sides;
+
+	return step(radius, cos(floor(0.5 + angle / slice) * slice - angle) * length(position));
+}
+
+//vec4 rotate(float angle){
+//	return vec4(cos(angle), -sin(angle), sin(angle), cos(angle));
+//}
+
+mat2 rotate(float angle){
+	return mat2(vec2(cos(angle), -sin(angle)), vec2(sin(angle), cos(angle)));
+}
+
+vec2 rotateUVmatrinx(vec2 uv, vec2 pivot, float rotation){
+    mat2 rotation_matrix=mat2(  vec2(sin(rotation),-cos(rotation)),
+                                vec2(cos(rotation),sin(rotation))
+                                );
+    uv -= pivot;
+    uv= uv*rotation_matrix;
+    uv += pivot;
+    return uv;
+}
+
+float rect(vec2 uv, vec2 size) {
+    float blur = 0.000;
+    // 让 size 成正比
+    size = 0.5 - size * 0.5;
+    // 先画一边
+    vec2 r = vec2(step(size.x, uv.x), step(size.y, uv.y));
+    // 再画相反的边，相乘得出相交位置就是对应的矩形
+    r *= vec2(step(size.x, 1.0 - uv.x), step(size.y, 1.0 - uv.y));
+    // x 和 y 相乘得出矩形的像素点值
+    return r.x * r.y;
+}
+
+float circle(vec2 uv, float r) {
+    uv -= 0.5;
+    uv.x *= resolution.x / resolution.y;
+    float blur = 0.005;
+    
+    // 用 uv 做长度,点距离零点的距离会呈圆形递增
+    float d = length(uv);
+    d = step(d, r);
+    return d;
+}
+
+
+void fragment() {
+	vec4 col = base_col;
+	vec2 uv = UV;
+//	uv.x *= -1.0;
+	if (flip) {
+		uv.x = 1.0 - abs(uv.x);
+	}
+	
+//    uv = rotateUVmatrinx(uv, vec2(0.5), -45.03);
+//	uv = rotateUVmatrinx(UV, vec2(0.52), TIME);
+//	uv.x *= -1.0;
+	float s = rect(vec2(uv.x+0.2,uv.y), vec2(1.0));
+	
+	uv -= vec2(0.5);
+	uv = rotate(1.57) * uv;
+	uv += vec2(0.5);
+	s += 1.0 - polygon(vec2(uv.x*0.15+0.2,uv.y+0.45), 0.4, 3);
+	s = min(s, 1.0);
+	col.a = s;
+	
+	COLOR = col;
+}"
+
+[sub_resource type="ShaderMaterial" id=81]
+resource_local_to_scene = true
+shader = SubResource( 80 )
+shader_param/base_col = Color( 0.937255, 0.717647, 0.458824, 1 )
+shader_param/resolution = Vector2( 256, 64 )
+shader_param/flip = true
+
+[sub_resource type="Shader" id=30]
+code = "shader_type canvas_item;
+
+uniform vec4 base_col: hint_color = vec4(0.27, 0.14, 0.05, 1.0);
+uniform vec2 resolution = vec2(256.0, 64.0);
+uniform float radius = 0.1;
+
+float sat(float t) {
+    return clamp(t, 0.0, 1.0);
+}
+
+float remap01(float a, float b, float t) {
+    return sat((t - a) / (b - a));
+}
+
+float remap(float a, float b, float c, float d, float t) {
+    return remap01(a, b, t) * (d - c) + c;
+}
+
+float rect(vec2 uv, vec2 size) {
+    float blur = 0.000;
+    // 让 size 成正比
+    size = 0.5 - size * 0.5;
+    // 先画一边
+    vec2 r = vec2(step(size.x, uv.x), step(size.y, uv.y));
+    // 再画相反的边，相乘得出相交位置就是对应的矩形
+    r *= vec2(step(size.x, 1.0 - uv.x), step(size.y, 1.0 - uv.y));
+    // x 和 y 相乘得出矩形的像素点值
+    return r.x * r.y;
+}
+
+float circle(vec2 uv, float r) {
+    uv -= 0.5;
+    uv.x *= resolution.x / resolution.y;
+    float blur = 0.005;
+    
+    // 用 uv 做长度,点距离零点的距离会呈圆形递增
+    float d = length(uv);
+    d = step(d, r);
+    return d;
+}
+
+
+float round_rect(vec2 uv, float r) {
+	float c1 = circle(uv+0.5-r, r);
+
+	float rect1 = rect(uv, vec2(1.0 - r * 1.5, 1.0));
+	float rect2 = rect(uv, vec2(1.0- r *2.0, 1.0));
+	rect1 = rect(vec2(uv.x - r, uv.y), vec2(1.0));
+	rect2 = rect(vec2(uv.x+0.2, uv.y - r * 1.0), vec2(1.0));
+
+	float s = min(c1+rect1+rect2, 1.0);
+	return s;
+}
+
+void fragment() {
+	vec4 col = base_col;
+	vec2 uv = UV;
+
+	float s = round_rect(uv, radius);
+	col.a = s;
+	
+	COLOR = col;
+}"
+
+[sub_resource type="ShaderMaterial" id=31]
+shader = SubResource( 30 )
+shader_param/base_col = Color( 0.447059, 0.458824, 0.686275, 1 )
+shader_param/resolution = Vector2( 160, 160 )
+shader_param/radius = 0.04
+
+[sub_resource type="Shader" id=32]
+code = "shader_type canvas_item;
+
+uniform vec4 base_col: hint_color = vec4(0.27, 0.14, 0.05, 1.0);
+uniform vec2 resolution = vec2(256.0, 64.0);
+uniform float radius = 0.1;
+
+float sat(float t) {
+    return clamp(t, 0.0, 1.0);
+}
+
+float remap01(float a, float b, float t) {
+    return sat((t - a) / (b - a));
+}
+
+float remap(float a, float b, float c, float d, float t) {
+    return remap01(a, b, t) * (d - c) + c;
+}
+
+float rect(vec2 uv, vec2 size) {
+    float blur = 0.000;
+    // 让 size 成正比
+    size = 0.5 - size * 0.5;
+    // 先画一边
+    vec2 r = vec2(step(size.x, uv.x), step(size.y, uv.y));
+    // 再画相反的边，相乘得出相交位置就是对应的矩形
+    r *= vec2(step(size.x, 1.0 - uv.x), step(size.y, 1.0 - uv.y));
+    // x 和 y 相乘得出矩形的像素点值
+    return r.x * r.y;
+}
+
+float circle(vec2 uv, float r) {
+    uv -= 0.5;
+    uv.x *= resolution.x / resolution.y;
+    float blur = 0.005;
+    
+    // 用 uv 做长度,点距离零点的距离会呈圆形递增
+    float d = length(uv);
+    d = step(d, r);
+    return d;
+}
+
+
+float round_rect(vec2 uv, float r) {
+	float c1 = circle(uv+0.5-r, r);
+	float c2 = circle(uv-0.5+r, r);
+	float c3 = circle(vec2(uv.x+0.5-r, uv.y-0.5+r), r);
+	float c4 = circle(vec2(uv.x-0.5+r, uv.y+0.5-r), r);
+
+	float rect1 = rect(uv, vec2(1.0 - r * 1.47, 1.0 - r * 2.0));
+	float rect2 = rect(uv, vec2(1.0- r *2.0, 1.0));
+
+	float s = min(c1+c2+c3+c4+rect1+rect2, 1.0);
+	return s;
+}
+
+void fragment() {
+	vec4 col = base_col;
+	vec2 uv = UV;
+
+	float s = round_rect(uv, radius);
+	col.a = s;
+	
+	COLOR = col;
+}"
+
+[sub_resource type="ShaderMaterial" id=57]
+resource_local_to_scene = true
+shader = SubResource( 32 )
+shader_param/base_col = Color( 0.419608, 0.188235, 0.109804, 1 )
+shader_param/resolution = Vector2( 120, 32 )
+shader_param/radius = 0.1
+
+[sub_resource type="AtlasTexture" id=82]
+atlas = ExtResource( 10 )
+region = Rect2( 0, 0, 16, 35 )
+
+[sub_resource type="AtlasTexture" id=83]
+atlas = ExtResource( 10 )
+region = Rect2( 16, 0, 16, 35 )
+
+[sub_resource type="SpriteFrames" id=86]
+animations = [ {
+"frames": [ SubResource( 82 ), SubResource( 83 ) ],
+"loop": true,
+"name": "lde",
+"speed": 2.0
+} ]
+
+[sub_resource type="AtlasTexture" id=87]
+atlas = ExtResource( 11 )
+region = Rect2( 0, 0, 25, 27 )
+
+[sub_resource type="AtlasTexture" id=88]
+atlas = ExtResource( 11 )
+region = Rect2( 25, 0, 25, 27 )
+
+[sub_resource type="SpriteFrames" id=85]
+animations = [ {
+"frames": [ SubResource( 87 ), SubResource( 88 ) ],
+"loop": true,
+"name": "lde",
+"speed": 2.0
+} ]
+
+[node name="Main" type="Node2D"]
+
+[node name="UI" type="Control" parent="."]
+margin_right = 40.0
+margin_bottom = 40.0
+rect_min_size = Vector2( 1280, 720 )
+
+[node name="Bg" type="ColorRect" parent="UI"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color( 0.682353, 0.705882, 0.901961, 1 )
+__meta__ = {
+"_edit_lock_": true
+}
+
+[node name="BgBlocks" type="Control" parent="UI/Bg"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+margin_left = -1.0
+margin_top = -2.0
+margin_right = -1.0
+margin_bottom = -2.0
+__meta__ = {
+"_edit_lock_": true
+}
+
+[node name="Block2" parent="UI/Bg/BgBlocks" instance=ExtResource( 1 )]
+margin_left = 221.0
+margin_top = 177.0
+margin_right = 674.0
+margin_bottom = 195.0
+velocity = 896
+
+[node name="Block3" parent="UI/Bg/BgBlocks" instance=ExtResource( 1 )]
+margin_left = 688.0
+margin_top = 501.0
+margin_right = 860.0
+margin_bottom = 519.0
+velocity = 1234
+
+[node name="Block4" parent="UI/Bg/BgBlocks" instance=ExtResource( 1 )]
+margin_left = 98.0
+margin_top = 643.0
+margin_right = 346.0
+margin_bottom = 661.0
+
+[node name="Block5" parent="UI/Bg/BgBlocks" instance=ExtResource( 1 )]
+margin_left = 1170.0
+margin_top = 364.0
+margin_right = 1385.0
+margin_bottom = 382.0
+velocity = 966
+
+[node name="Scene" type="TextureRect" parent="UI"]
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+margin_left = -440.0
+margin_top = -208.0
+margin_right = 520.0
+margin_bottom = 332.0
+rect_min_size = Vector2( 960, 540 )
+texture = ExtResource( 2 )
+expand = true
+__meta__ = {
+"_edit_lock_": true
+}
+
+[node name="Top" type="Control" parent="UI"]
+anchor_right = 1.0
+rect_min_size = Vector2( 0, 128 )
+
+[node name="MarginContainer" type="MarginContainer" parent="UI/Top"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+rect_min_size = Vector2( 0, 128 )
+size_flags_horizontal = 3
+size_flags_vertical = 3
+custom_constants/margin_right = 32
+custom_constants/margin_left = 32
+
+[node name="HBoxContainer" type="HBoxContainer" parent="UI/Top/MarginContainer"]
+margin_left = 32.0
+margin_top = 34.0
+margin_right = 1248.0
+margin_bottom = 94.0
+rect_min_size = Vector2( 0, 60 )
+size_flags_horizontal = 0
+size_flags_vertical = 6
+
+[node name="Player" type="HBoxContainer" parent="UI/Top/MarginContainer/HBoxContainer"]
+margin_right = 562.0
+margin_bottom = 60.0
+custom_constants/separation = 12
+
+[node name="Portrait" type="TextureRect" parent="UI/Top/MarginContainer/HBoxContainer/Player"]
+margin_right = 60.0
+margin_bottom = 60.0
+rect_min_size = Vector2( 60, 60 )
+size_flags_horizontal = 0
+size_flags_vertical = 6
+texture = ExtResource( 4 )
+expand = true
+
+[node name="HpBar" parent="UI/Top/MarginContainer/HBoxContainer/Player" instance=ExtResource( 3 )]
+margin_left = 72.0
+margin_top = 6.0
+margin_right = 562.0
+margin_bottom = 54.0
+rect_min_size = Vector2( 490, 48 )
+size_flags_horizontal = 0
+size_flags_vertical = 6
+
+[node name="RichTextLabel" type="RichTextLabel" parent="UI/Top/MarginContainer/HBoxContainer"]
+margin_left = 566.0
+margin_right = 650.0
+margin_bottom = 60.0
+rect_min_size = Vector2( 84, 60 )
+size_flags_vertical = 6
+custom_colors/default_color = Color( 0.937255, 0.717647, 0.458824, 1 )
+custom_fonts/normal_font = SubResource( 1 )
+bbcode_enabled = true
+bbcode_text = "[center]VS[/center]"
+text = "VS"
+scroll_active = false
+
+[node name="Enemy" type="HBoxContainer" parent="UI/Top/MarginContainer/HBoxContainer"]
+margin_left = 654.0
+margin_right = 1216.0
+margin_bottom = 60.0
+custom_constants/separation = 12
+
+[node name="HpBar" parent="UI/Top/MarginContainer/HBoxContainer/Enemy" instance=ExtResource( 3 )]
+margin_left = 0.0
+margin_top = 6.0
+margin_right = 490.0
+margin_bottom = 54.0
+rect_min_size = Vector2( 490, 48 )
+size_flags_horizontal = 0
+size_flags_vertical = 6
+
+[node name="Portrait" type="TextureRect" parent="UI/Top/MarginContainer/HBoxContainer/Enemy"]
+margin_left = 502.0
+margin_right = 562.0
+margin_bottom = 60.0
+rect_min_size = Vector2( 60, 60 )
+size_flags_horizontal = 0
+size_flags_vertical = 6
+texture = ExtResource( 5 )
+expand = true
+
+[node name="TermKeyPanel" type="Panel" parent="UI"]
+material = SubResource( 4 )
+anchor_left = 1.0
+anchor_top = 0.2
+anchor_right = 1.0
+anchor_bottom = 0.2
+margin_left = -232.0
+margin_top = -10.0
+margin_right = 24.0
+margin_bottom = 54.0
+rect_min_size = Vector2( 256, 64 )
+rect_scale = Vector2( 1, 1.00859 )
+size_flags_horizontal = 0
+size_flags_vertical = 0
+__meta__ = {
+"_edit_group_": true
+}
+
+[node name="Label" type="Label" parent="UI/TermKeyPanel"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+size_flags_horizontal = 3
+size_flags_vertical = 6
+custom_fonts/font = SubResource( 29 )
+text = "Reason"
+align = 1
+valign = 1
+
+[node name="PlayerActionPanel" type="VBoxContainer" parent="UI"]
+anchor_top = 0.55
+anchor_bottom = 0.55
+margin_top = -260.0
+margin_right = 280.0
+margin_bottom = 284.0
+rect_min_size = Vector2( 280, 520 )
+custom_constants/separation = 32
+__meta__ = {
+"_edit_lock_": true
+}
+
+[node name="Action" parent="UI/PlayerActionPanel" instance=ExtResource( 8 )]
+material = SubResource( 59 )
+
+[node name="Action2" parent="UI/PlayerActionPanel" instance=ExtResource( 8 )]
+material = SubResource( 61 )
+margin_top = 96.0
+margin_bottom = 160.0
+
+[node name="Action3" parent="UI/PlayerActionPanel" instance=ExtResource( 8 )]
+material = SubResource( 63 )
+margin_top = 192.0
+margin_bottom = 256.0
+
+[node name="Action4" parent="UI/PlayerActionPanel" instance=ExtResource( 8 )]
+material = SubResource( 65 )
+margin_top = 288.0
+margin_bottom = 352.0
+
+[node name="Action5" parent="UI/PlayerActionPanel" instance=ExtResource( 8 )]
+material = SubResource( 67 )
+margin_top = 384.0
+margin_bottom = 448.0
+
+[node name="SAction" parent="UI/PlayerActionPanel" instance=ExtResource( 8 )]
+material = SubResource( 69 )
+margin_top = 480.0
+margin_bottom = 544.0
+special = true
+
+[node name="EmenyPanel" type="VBoxContainer" parent="UI"]
+anchor_left = 1.0
+anchor_top = 0.48
+anchor_right = 1.0
+anchor_bottom = 0.48
+margin_left = -140.0
+margin_top = -126.0
+margin_bottom = 126.0
+rect_pivot_offset = Vector2( 162, 95 )
+custom_constants/separation = 12
+
+[node name="Action1" parent="UI/EmenyPanel" instance=ExtResource( 8 )]
+material = SubResource( 71 )
+margin_right = 140.0
+margin_bottom = 32.0
+rect_min_size = Vector2( 0, 32 )
+mouse_default_cursor_shape = 0
+flip = true
+font_visible = false
+
+[node name="Action2" parent="UI/EmenyPanel" instance=ExtResource( 8 )]
+material = SubResource( 73 )
+margin_top = 44.0
+margin_right = 140.0
+margin_bottom = 76.0
+rect_min_size = Vector2( 0, 32 )
+mouse_default_cursor_shape = 0
+flip = true
+font_visible = false
+
+[node name="Action3" parent="UI/EmenyPanel" instance=ExtResource( 8 )]
+material = SubResource( 75 )
+margin_top = 88.0
+margin_right = 140.0
+margin_bottom = 120.0
+rect_min_size = Vector2( 0, 32 )
+mouse_default_cursor_shape = 0
+flip = true
+font_visible = false
+
+[node name="Action4" parent="UI/EmenyPanel" instance=ExtResource( 8 )]
+material = SubResource( 77 )
+margin_top = 132.0
+margin_right = 140.0
+margin_bottom = 164.0
+rect_min_size = Vector2( 0, 32 )
+mouse_default_cursor_shape = 0
+flip = true
+font_visible = false
+
+[node name="Action5" parent="UI/EmenyPanel" instance=ExtResource( 8 )]
+material = SubResource( 79 )
+margin_top = 176.0
+margin_right = 140.0
+margin_bottom = 208.0
+rect_min_size = Vector2( 0, 32 )
+mouse_default_cursor_shape = 0
+flip = true
+font_visible = false
+
+[node name="SAction" parent="UI/EmenyPanel" instance=ExtResource( 8 )]
+material = SubResource( 81 )
+margin_top = 220.0
+margin_right = 140.0
+margin_bottom = 252.0
+rect_min_size = Vector2( 0, 32 )
+mouse_default_cursor_shape = 0
+special = true
+flip = true
+font_visible = false
+
+[node name="ActionStack" type="Panel" parent="UI"]
+material = SubResource( 31 )
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+margin_left = -140.0
+margin_top = -189.0
+rect_min_size = Vector2( 140, 160 )
+
+[node name="MarginContainer" type="MarginContainer" parent="UI/ActionStack"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+custom_constants/margin_right = 10
+custom_constants/margin_top = 10
+custom_constants/margin_left = 10
+custom_constants/margin_bottom = 15
+
+[node name="VBoxContainer" type="VBoxContainer" parent="UI/ActionStack/MarginContainer"]
+margin_left = 10.0
+margin_top = 10.0
+margin_right = 130.0
+margin_bottom = 174.0
+custom_constants/separation = 10
+alignment = 2
+
+[node name="StackItem" parent="UI/ActionStack/MarginContainer/VBoxContainer" instance=ExtResource( 9 )]
+material = SubResource( 57 )
+
+[node name="StackItem2" parent="UI/ActionStack/MarginContainer/VBoxContainer" instance=ExtResource( 9 )]
+material = SubResource( 57 )
+margin_top = 48.0
+margin_bottom = 80.0
+
+[node name="StackItem3" parent="UI/ActionStack/MarginContainer/VBoxContainer" instance=ExtResource( 9 )]
+material = SubResource( 57 )
+margin_top = 90.0
+margin_bottom = 122.0
+
+[node name="StackItem4" parent="UI/ActionStack/MarginContainer/VBoxContainer" instance=ExtResource( 9 )]
+material = SubResource( 57 )
+margin_top = 132.0
+margin_bottom = 164.0
+
+[node name="Player" type="AnimatedSprite" parent="."]
+position = Vector2( 537, 464 )
+scale = Vector2( 4, 4 )
+frames = SubResource( 86 )
+animation = "lde"
+frame = 1
+playing = true
+
+[node name="Ghost" type="AnimatedSprite" parent="."]
+position = Vector2( 746, 341 )
+scale = Vector2( 4, 4 )
+frames = SubResource( 85 )
+animation = "lde"
+frame = 1
+playing = true
