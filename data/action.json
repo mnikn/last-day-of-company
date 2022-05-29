@@ -35,5 +35,23 @@
     "type": "special",
     "color": "",
     "custom_process": ""
+  },
+  {
+    "id": "think",
+    "name": {
+      "zh": "考虑"
+    },
+    "type": "special",
+    "color": "",
+    "custom_process": ""
+  },
+  {
+    "id": "sophistry",
+    "name": {
+      "zh": "诡辩"
+    },
+    "type": "special",
+    "color": "",
+    "custom_process": ""
   }
 ]
