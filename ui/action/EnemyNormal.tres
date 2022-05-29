@@ -1,0 +1,8 @@
+[gd_resource type="ShaderMaterial" load_steps=2 format=2]
+
+[ext_resource path="res://ui/action/Action.gdshader" type="Shader" id=1]
+
+[resource]
+shader = ExtResource( 1 )
+shader_param/base_col = Color( 0.419608, 0.188235, 0.109804, 1 )
+shader_param/flip = true

@@ -1,0 +1,38 @@
+[gd_scene load_steps=5 format=2]
+
+[ext_resource path="res://ui/action/Action.gd" type="Script" id=1]
+[ext_resource path="res://assets/fonts/GlowSansJ-Normal-Bold.otf" type="DynamicFontData" id=2]
+[ext_resource path="res://ui/action/PlayerNormal.tres" type="Material" id=3]
+
+[sub_resource type="DynamicFont" id=7]
+resource_local_to_scene = true
+size = 24
+font_data = ExtResource( 2 )
+
+[node name="Action" type="Panel"]
+material = ExtResource( 3 )
+margin_right = 280.0
+margin_bottom = 64.0
+rect_min_size = Vector2( 280, 64 )
+mouse_default_cursor_shape = 2
+size_flags_vertical = 0
+script = ExtResource( 1 )
+player = false
+
+[node name="RichTextLabel" type="Label" parent="."]
+anchor_left = 0.3
+anchor_top = 0.5
+anchor_right = 0.3
+anchor_bottom = 0.5
+margin_top = -17.5
+margin_right = 198.0
+margin_bottom = 17.5
+mouse_filter = 1
+size_flags_horizontal = 0
+size_flags_vertical = 0
+custom_colors/font_color = Color( 0.937255, 0.717647, 0.458824, 1 )
+custom_fonts/font = SubResource( 7 )
+text = "Reason"
+
+[connection signal="mouse_entered" from="." to="." method="_on_Action_mouse_entered"]
+[connection signal="mouse_exited" from="." to="." method="_on_Action_mouse_exited"]

@@ -1,4 +1,4 @@
-[gd_scene load_steps=50 format=2]
+[gd_scene load_steps=29 format=2]
 
 [ext_resource path="res://ui/BgBlock.tscn" type="PackedScene" id=1]
 [ext_resource path="res://assets/ui/scene/scene.png" type="Texture" id=2]
@@ -6,17 +6,114 @@
 [ext_resource path="res://assets/ui/portrait/main_character.png" type="Texture" id=4]
 [ext_resource path="res://assets/ui/portrait/normal_ghost.png" type="Texture" id=5]
 [ext_resource path="res://assets/fonts/blowbrush.ttf" type="DynamicFontData" id=6]
-[ext_resource path="res://assets/fonts/GlowSansJ-Normal-Medium.otf" type="DynamicFontData" id=7]
-[ext_resource path="res://ui/Action.tscn" type="PackedScene" id=8]
+[ext_resource path="res://assets/fonts/douyuFont-2.otf" type="DynamicFontData" id=7]
 [ext_resource path="res://ui/StackItem.tscn" type="PackedScene" id=9]
 [ext_resource path="res://assets/ui/sprites/player/idle.png" type="Texture" id=10]
 [ext_resource path="res://assets/ui/sprites/ghost/idle.png" type="Texture" id=11]
+[ext_resource path="res://Main.gd" type="Script" id=12]
 
-[sub_resource type="DynamicFont" id=1]
+[sub_resource type="Shader" id=1]
+code = "shader_type canvas_item;
+
+uniform vec4 base_color: hint_color = vec4(1.0, 0.2, 0.1, 1.0);
+uniform vec2 resolution = vec2(492.0, 40.0);
+uniform bool flip = false;
+
+float rect(vec2 uv, vec2 size) {
+    float blur = 0.000;
+    // 让 size 成正比
+    size = 0.5 - size * 0.5;
+    // 先画一边
+    vec2 r = vec2(step(size.x, uv.x), step(size.y, uv.y));
+    // 再画相反的边，相乘得出相交位置就是对应的矩形
+    r *= vec2(step(size.x, 1.0 - uv.x), step(size.y, 1.0 - uv.y));
+    // x 和 y 相乘得出矩形的像素点值
+    return r.x * r.y;
+}
+
+float circle(vec2 uv, float r, vec2 arg_resoulation) {
+    uv -= 0.5;
+//	resolution = vec2(492, 40);	
+//    uv.x *= iResolution.x / iResolution.y;
+	uv.x *= arg_resoulation.x / arg_resoulation.y;
+    float blur = 0.005;
+    
+    // 用 uv 做长度,点距离零点的距离会呈圆形递增
+    float d = length(uv);
+    d = step(d, r);
+    return d;
+}
+
+float round_rect(vec2 uv, vec2 arg_resoulation) {    
+    float radius = 0.5;
+    float c1 = circle(vec2(uv.x+0.45, uv.y), radius, arg_resoulation);
+    float c2 = circle(vec2(uv.x-0.45, uv.y), radius, arg_resoulation);
+    
+//    float r = rect(vec2(uv.x, uv.y), vec2(size.x-radius, size.y));
+    float r = rect(vec2(uv.x, uv.y), vec2(0.9, 1.0));
+	
+	float res = c1+c2+r;
+//	float res = r;
+
+    return min(res, 1.0);
+}
+
+void fragment()
+{
+    // Normalized pixel coordinates (from 0 to 1)
+    vec2 uv = UV;
+	if (flip) {
+		uv.x = 1.0 - uv.x;
+	}
+	
+	vec4 col = base_color;
+    
+    vec2 size = vec2(1.0, 1.0);
+    
+    
+    float t = round_rect(uv, resolution);
+    col.a = t;
+	
+	// outline
+	float offset = 0.005;
+	uv.y *= 1.05;
+	uv.x += offset;
+	t = round_rect(uv*(1.0 + offset) - offset / 2.0, resolution);
+	col.rgb = mix(col.rgb, col.rgb * 0.2, 1.0 - t);
+    
+    // highlight
+    float hy = uv.y;
+    hy += sin(TIME*6.+uv.x*12.0) * sin(TIME*3.0) * 0.2;
+    float highlight = smoothstep(0.6, 0.6, hy);
+    highlight *= 3.0;
+    if (hy <= 0.3) {
+        col.rgb *= 1.5;
+    }
+       
+
+    // Output to screen
+    COLOR = col;
+}"
+
+[sub_resource type="ShaderMaterial" id=95]
+resource_local_to_scene = true
+shader = SubResource( 1 )
+shader_param/base_color = Color( 0.763672, 0.207974, 0.207974, 1 )
+shader_param/resolution = Vector2( 490, 48 )
+shader_param/flip = false
+
+[sub_resource type="DynamicFont" id=94]
 size = 64
 outline_size = 2
 outline_color = Color( 0.270588, 0.137255, 0.0509804, 1 )
 font_data = ExtResource( 6 )
+
+[sub_resource type="ShaderMaterial" id=96]
+resource_local_to_scene = true
+shader = SubResource( 1 )
+shader_param/base_color = Color( 0.763672, 0.207974, 0.207974, 1 )
+shader_param/resolution = Vector2( 490, 48 )
+shader_param/flip = true
 
 [sub_resource type="Shader" id=3]
 code = "shader_type canvas_item;
@@ -75,1231 +172,39 @@ float round_rect(vec2 uv, float r) {
 }
 
 void fragment() {
-	vec4 col = base_col;
+	vec4 col = vec4(0.27, 0.14, 0.01, 1.0);
 	vec2 uv = UV;
 
 	float s = round_rect(uv, radius);
 	col.a = s;
+	
+	
+	float offset = 0.1;
+	s = round_rect(uv*(1.0 + offset) - offset / 2.0, radius);
+	col.rgb = mix(col.rgb, vec3(0.86, 0.59, 0.52), s);
+	
+	offset = 0.2;
+	s = round_rect(uv*(1.0 + offset) - offset / 2.0, radius);
+	col.rgb = mix(col.rgb, vec3(0.65, 0.38, 0.26), s);
+//	uv *= 1.5;
+//	uv -= 0.5;
+//	s = round_rect(uv, radius);
+//	col.rgb = mix(col.rgb, col.rgb*1.5, 1.0 - s); 
 	
 	COLOR = col;
 }"
 
 [sub_resource type="ShaderMaterial" id=4]
 shader = SubResource( 3 )
-shader_param/base_col = Color( 0.270588, 0.137255, 0.0509804, 1 )
+shader_param/base_col = Color( 0.647059, 0.384314, 0.262745, 1 )
 shader_param/resolution = Vector2( 256, 64 )
 shader_param/radius = 0.1
 
 [sub_resource type="DynamicFont" id=29]
 size = 24
+outline_size = 2
+outline_color = Color( 0.270588, 0.137255, 0.0509804, 1 )
 font_data = ExtResource( 7 )
-
-[sub_resource type="Shader" id=58]
-code = "shader_type canvas_item;
-
-uniform vec4 base_col: hint_color = vec4(0.27, 0.14, 0.05, 1.0);
-uniform vec2 resolution = vec2(256.0, 64.0);
-uniform bool flip = false;
-
-const float PI = 3.1415;
-
-float sat(float t) {
-    return clamp(t, 0.0, 1.0);
-}
-
-float remap01(float a, float b, float t) {
-    return sat((t - a) / (b - a));
-}
-
-float remap(float a, float b, float c, float d, float t) {
-    return remap01(a, b, t) * (d - c) + c;
-}
-
-float polygon(vec2 position, float radius, float sides){
-	position = position * 2.0 - 1.0;
-	float angle = atan(position.x, position.y);
-	float slice = PI * 2.0 / sides;
-
-	return step(radius, cos(floor(0.5 + angle / slice) * slice - angle) * length(position));
-}
-
-//vec4 rotate(float angle){
-//	return vec4(cos(angle), -sin(angle), sin(angle), cos(angle));
-//}
-
-mat2 rotate(float angle){
-	return mat2(vec2(cos(angle), -sin(angle)), vec2(sin(angle), cos(angle)));
-}
-
-vec2 rotateUVmatrinx(vec2 uv, vec2 pivot, float rotation){
-    mat2 rotation_matrix=mat2(  vec2(sin(rotation),-cos(rotation)),
-                                vec2(cos(rotation),sin(rotation))
-                                );
-    uv -= pivot;
-    uv= uv*rotation_matrix;
-    uv += pivot;
-    return uv;
-}
-
-float rect(vec2 uv, vec2 size) {
-    float blur = 0.000;
-    // 让 size 成正比
-    size = 0.5 - size * 0.5;
-    // 先画一边
-    vec2 r = vec2(step(size.x, uv.x), step(size.y, uv.y));
-    // 再画相反的边，相乘得出相交位置就是对应的矩形
-    r *= vec2(step(size.x, 1.0 - uv.x), step(size.y, 1.0 - uv.y));
-    // x 和 y 相乘得出矩形的像素点值
-    return r.x * r.y;
-}
-
-float circle(vec2 uv, float r) {
-    uv -= 0.5;
-    uv.x *= resolution.x / resolution.y;
-    float blur = 0.005;
-    
-    // 用 uv 做长度,点距离零点的距离会呈圆形递增
-    float d = length(uv);
-    d = step(d, r);
-    return d;
-}
-
-
-void fragment() {
-	vec4 col = base_col;
-	vec2 uv = UV;
-//	uv.x *= -1.0;
-	if (flip) {
-		uv.x = 1.0 - abs(uv.x);
-	}
-	
-//    uv = rotateUVmatrinx(uv, vec2(0.5), -45.03);
-//	uv = rotateUVmatrinx(UV, vec2(0.52), TIME);
-//	uv.x *= -1.0;
-	float s = rect(vec2(uv.x+0.2,uv.y), vec2(1.0));
-	
-	uv -= vec2(0.5);
-	uv = rotate(1.57) * uv;
-	uv += vec2(0.5);
-	s += 1.0 - polygon(vec2(uv.x*0.15+0.2,uv.y+0.45), 0.4, 3);
-	s = min(s, 1.0);
-	col.a = s;
-	
-	COLOR = col;
-}"
-
-[sub_resource type="ShaderMaterial" id=59]
-resource_local_to_scene = true
-shader = SubResource( 58 )
-shader_param/base_col = Color( 0.419608, 0.188235, 0.109804, 1 )
-shader_param/resolution = Vector2( 256, 64 )
-shader_param/flip = false
-
-[sub_resource type="Shader" id=60]
-code = "shader_type canvas_item;
-
-uniform vec4 base_col: hint_color = vec4(0.27, 0.14, 0.05, 1.0);
-uniform vec2 resolution = vec2(256.0, 64.0);
-uniform bool flip = false;
-
-const float PI = 3.1415;
-
-float sat(float t) {
-    return clamp(t, 0.0, 1.0);
-}
-
-float remap01(float a, float b, float t) {
-    return sat((t - a) / (b - a));
-}
-
-float remap(float a, float b, float c, float d, float t) {
-    return remap01(a, b, t) * (d - c) + c;
-}
-
-float polygon(vec2 position, float radius, float sides){
-	position = position * 2.0 - 1.0;
-	float angle = atan(position.x, position.y);
-	float slice = PI * 2.0 / sides;
-
-	return step(radius, cos(floor(0.5 + angle / slice) * slice - angle) * length(position));
-}
-
-//vec4 rotate(float angle){
-//	return vec4(cos(angle), -sin(angle), sin(angle), cos(angle));
-//}
-
-mat2 rotate(float angle){
-	return mat2(vec2(cos(angle), -sin(angle)), vec2(sin(angle), cos(angle)));
-}
-
-vec2 rotateUVmatrinx(vec2 uv, vec2 pivot, float rotation){
-    mat2 rotation_matrix=mat2(  vec2(sin(rotation),-cos(rotation)),
-                                vec2(cos(rotation),sin(rotation))
-                                );
-    uv -= pivot;
-    uv= uv*rotation_matrix;
-    uv += pivot;
-    return uv;
-}
-
-float rect(vec2 uv, vec2 size) {
-    float blur = 0.000;
-    // 让 size 成正比
-    size = 0.5 - size * 0.5;
-    // 先画一边
-    vec2 r = vec2(step(size.x, uv.x), step(size.y, uv.y));
-    // 再画相反的边，相乘得出相交位置就是对应的矩形
-    r *= vec2(step(size.x, 1.0 - uv.x), step(size.y, 1.0 - uv.y));
-    // x 和 y 相乘得出矩形的像素点值
-    return r.x * r.y;
-}
-
-float circle(vec2 uv, float r) {
-    uv -= 0.5;
-    uv.x *= resolution.x / resolution.y;
-    float blur = 0.005;
-    
-    // 用 uv 做长度,点距离零点的距离会呈圆形递增
-    float d = length(uv);
-    d = step(d, r);
-    return d;
-}
-
-
-void fragment() {
-	vec4 col = base_col;
-	vec2 uv = UV;
-//	uv.x *= -1.0;
-	if (flip) {
-		uv.x = 1.0 - abs(uv.x);
-	}
-	
-//    uv = rotateUVmatrinx(uv, vec2(0.5), -45.03);
-//	uv = rotateUVmatrinx(UV, vec2(0.52), TIME);
-//	uv.x *= -1.0;
-	float s = rect(vec2(uv.x+0.2,uv.y), vec2(1.0));
-	
-	uv -= vec2(0.5);
-	uv = rotate(1.57) * uv;
-	uv += vec2(0.5);
-	s += 1.0 - polygon(vec2(uv.x*0.15+0.2,uv.y+0.45), 0.4, 3);
-	s = min(s, 1.0);
-	col.a = s;
-	
-	COLOR = col;
-}"
-
-[sub_resource type="ShaderMaterial" id=61]
-resource_local_to_scene = true
-shader = SubResource( 60 )
-shader_param/base_col = Color( 0.419608, 0.188235, 0.109804, 1 )
-shader_param/resolution = Vector2( 256, 64 )
-shader_param/flip = false
-
-[sub_resource type="Shader" id=62]
-code = "shader_type canvas_item;
-
-uniform vec4 base_col: hint_color = vec4(0.27, 0.14, 0.05, 1.0);
-uniform vec2 resolution = vec2(256.0, 64.0);
-uniform bool flip = false;
-
-const float PI = 3.1415;
-
-float sat(float t) {
-    return clamp(t, 0.0, 1.0);
-}
-
-float remap01(float a, float b, float t) {
-    return sat((t - a) / (b - a));
-}
-
-float remap(float a, float b, float c, float d, float t) {
-    return remap01(a, b, t) * (d - c) + c;
-}
-
-float polygon(vec2 position, float radius, float sides){
-	position = position * 2.0 - 1.0;
-	float angle = atan(position.x, position.y);
-	float slice = PI * 2.0 / sides;
-
-	return step(radius, cos(floor(0.5 + angle / slice) * slice - angle) * length(position));
-}
-
-//vec4 rotate(float angle){
-//	return vec4(cos(angle), -sin(angle), sin(angle), cos(angle));
-//}
-
-mat2 rotate(float angle){
-	return mat2(vec2(cos(angle), -sin(angle)), vec2(sin(angle), cos(angle)));
-}
-
-vec2 rotateUVmatrinx(vec2 uv, vec2 pivot, float rotation){
-    mat2 rotation_matrix=mat2(  vec2(sin(rotation),-cos(rotation)),
-                                vec2(cos(rotation),sin(rotation))
-                                );
-    uv -= pivot;
-    uv= uv*rotation_matrix;
-    uv += pivot;
-    return uv;
-}
-
-float rect(vec2 uv, vec2 size) {
-    float blur = 0.000;
-    // 让 size 成正比
-    size = 0.5 - size * 0.5;
-    // 先画一边
-    vec2 r = vec2(step(size.x, uv.x), step(size.y, uv.y));
-    // 再画相反的边，相乘得出相交位置就是对应的矩形
-    r *= vec2(step(size.x, 1.0 - uv.x), step(size.y, 1.0 - uv.y));
-    // x 和 y 相乘得出矩形的像素点值
-    return r.x * r.y;
-}
-
-float circle(vec2 uv, float r) {
-    uv -= 0.5;
-    uv.x *= resolution.x / resolution.y;
-    float blur = 0.005;
-    
-    // 用 uv 做长度,点距离零点的距离会呈圆形递增
-    float d = length(uv);
-    d = step(d, r);
-    return d;
-}
-
-
-void fragment() {
-	vec4 col = base_col;
-	vec2 uv = UV;
-//	uv.x *= -1.0;
-	if (flip) {
-		uv.x = 1.0 - abs(uv.x);
-	}
-	
-//    uv = rotateUVmatrinx(uv, vec2(0.5), -45.03);
-//	uv = rotateUVmatrinx(UV, vec2(0.52), TIME);
-//	uv.x *= -1.0;
-	float s = rect(vec2(uv.x+0.2,uv.y), vec2(1.0));
-	
-	uv -= vec2(0.5);
-	uv = rotate(1.57) * uv;
-	uv += vec2(0.5);
-	s += 1.0 - polygon(vec2(uv.x*0.15+0.2,uv.y+0.45), 0.4, 3);
-	s = min(s, 1.0);
-	col.a = s;
-	
-	COLOR = col;
-}"
-
-[sub_resource type="ShaderMaterial" id=63]
-resource_local_to_scene = true
-shader = SubResource( 62 )
-shader_param/base_col = Color( 0.419608, 0.188235, 0.109804, 1 )
-shader_param/resolution = Vector2( 256, 64 )
-shader_param/flip = false
-
-[sub_resource type="Shader" id=64]
-code = "shader_type canvas_item;
-
-uniform vec4 base_col: hint_color = vec4(0.27, 0.14, 0.05, 1.0);
-uniform vec2 resolution = vec2(256.0, 64.0);
-uniform bool flip = false;
-
-const float PI = 3.1415;
-
-float sat(float t) {
-    return clamp(t, 0.0, 1.0);
-}
-
-float remap01(float a, float b, float t) {
-    return sat((t - a) / (b - a));
-}
-
-float remap(float a, float b, float c, float d, float t) {
-    return remap01(a, b, t) * (d - c) + c;
-}
-
-float polygon(vec2 position, float radius, float sides){
-	position = position * 2.0 - 1.0;
-	float angle = atan(position.x, position.y);
-	float slice = PI * 2.0 / sides;
-
-	return step(radius, cos(floor(0.5 + angle / slice) * slice - angle) * length(position));
-}
-
-//vec4 rotate(float angle){
-//	return vec4(cos(angle), -sin(angle), sin(angle), cos(angle));
-//}
-
-mat2 rotate(float angle){
-	return mat2(vec2(cos(angle), -sin(angle)), vec2(sin(angle), cos(angle)));
-}
-
-vec2 rotateUVmatrinx(vec2 uv, vec2 pivot, float rotation){
-    mat2 rotation_matrix=mat2(  vec2(sin(rotation),-cos(rotation)),
-                                vec2(cos(rotation),sin(rotation))
-                                );
-    uv -= pivot;
-    uv= uv*rotation_matrix;
-    uv += pivot;
-    return uv;
-}
-
-float rect(vec2 uv, vec2 size) {
-    float blur = 0.000;
-    // 让 size 成正比
-    size = 0.5 - size * 0.5;
-    // 先画一边
-    vec2 r = vec2(step(size.x, uv.x), step(size.y, uv.y));
-    // 再画相反的边，相乘得出相交位置就是对应的矩形
-    r *= vec2(step(size.x, 1.0 - uv.x), step(size.y, 1.0 - uv.y));
-    // x 和 y 相乘得出矩形的像素点值
-    return r.x * r.y;
-}
-
-float circle(vec2 uv, float r) {
-    uv -= 0.5;
-    uv.x *= resolution.x / resolution.y;
-    float blur = 0.005;
-    
-    // 用 uv 做长度,点距离零点的距离会呈圆形递增
-    float d = length(uv);
-    d = step(d, r);
-    return d;
-}
-
-
-void fragment() {
-	vec4 col = base_col;
-	vec2 uv = UV;
-//	uv.x *= -1.0;
-	if (flip) {
-		uv.x = 1.0 - abs(uv.x);
-	}
-	
-//    uv = rotateUVmatrinx(uv, vec2(0.5), -45.03);
-//	uv = rotateUVmatrinx(UV, vec2(0.52), TIME);
-//	uv.x *= -1.0;
-	float s = rect(vec2(uv.x+0.2,uv.y), vec2(1.0));
-	
-	uv -= vec2(0.5);
-	uv = rotate(1.57) * uv;
-	uv += vec2(0.5);
-	s += 1.0 - polygon(vec2(uv.x*0.15+0.2,uv.y+0.45), 0.4, 3);
-	s = min(s, 1.0);
-	col.a = s;
-	
-	COLOR = col;
-}"
-
-[sub_resource type="ShaderMaterial" id=65]
-resource_local_to_scene = true
-shader = SubResource( 64 )
-shader_param/base_col = Color( 0.419608, 0.188235, 0.109804, 1 )
-shader_param/resolution = Vector2( 256, 64 )
-shader_param/flip = false
-
-[sub_resource type="Shader" id=66]
-code = "shader_type canvas_item;
-
-uniform vec4 base_col: hint_color = vec4(0.27, 0.14, 0.05, 1.0);
-uniform vec2 resolution = vec2(256.0, 64.0);
-uniform bool flip = false;
-
-const float PI = 3.1415;
-
-float sat(float t) {
-    return clamp(t, 0.0, 1.0);
-}
-
-float remap01(float a, float b, float t) {
-    return sat((t - a) / (b - a));
-}
-
-float remap(float a, float b, float c, float d, float t) {
-    return remap01(a, b, t) * (d - c) + c;
-}
-
-float polygon(vec2 position, float radius, float sides){
-	position = position * 2.0 - 1.0;
-	float angle = atan(position.x, position.y);
-	float slice = PI * 2.0 / sides;
-
-	return step(radius, cos(floor(0.5 + angle / slice) * slice - angle) * length(position));
-}
-
-//vec4 rotate(float angle){
-//	return vec4(cos(angle), -sin(angle), sin(angle), cos(angle));
-//}
-
-mat2 rotate(float angle){
-	return mat2(vec2(cos(angle), -sin(angle)), vec2(sin(angle), cos(angle)));
-}
-
-vec2 rotateUVmatrinx(vec2 uv, vec2 pivot, float rotation){
-    mat2 rotation_matrix=mat2(  vec2(sin(rotation),-cos(rotation)),
-                                vec2(cos(rotation),sin(rotation))
-                                );
-    uv -= pivot;
-    uv= uv*rotation_matrix;
-    uv += pivot;
-    return uv;
-}
-
-float rect(vec2 uv, vec2 size) {
-    float blur = 0.000;
-    // 让 size 成正比
-    size = 0.5 - size * 0.5;
-    // 先画一边
-    vec2 r = vec2(step(size.x, uv.x), step(size.y, uv.y));
-    // 再画相反的边，相乘得出相交位置就是对应的矩形
-    r *= vec2(step(size.x, 1.0 - uv.x), step(size.y, 1.0 - uv.y));
-    // x 和 y 相乘得出矩形的像素点值
-    return r.x * r.y;
-}
-
-float circle(vec2 uv, float r) {
-    uv -= 0.5;
-    uv.x *= resolution.x / resolution.y;
-    float blur = 0.005;
-    
-    // 用 uv 做长度,点距离零点的距离会呈圆形递增
-    float d = length(uv);
-    d = step(d, r);
-    return d;
-}
-
-
-void fragment() {
-	vec4 col = base_col;
-	vec2 uv = UV;
-//	uv.x *= -1.0;
-	if (flip) {
-		uv.x = 1.0 - abs(uv.x);
-	}
-	
-//    uv = rotateUVmatrinx(uv, vec2(0.5), -45.03);
-//	uv = rotateUVmatrinx(UV, vec2(0.52), TIME);
-//	uv.x *= -1.0;
-	float s = rect(vec2(uv.x+0.2,uv.y), vec2(1.0));
-	
-	uv -= vec2(0.5);
-	uv = rotate(1.57) * uv;
-	uv += vec2(0.5);
-	s += 1.0 - polygon(vec2(uv.x*0.15+0.2,uv.y+0.45), 0.4, 3);
-	s = min(s, 1.0);
-	col.a = s;
-	
-	COLOR = col;
-}"
-
-[sub_resource type="ShaderMaterial" id=67]
-resource_local_to_scene = true
-shader = SubResource( 66 )
-shader_param/base_col = Color( 0.419608, 0.188235, 0.109804, 1 )
-shader_param/resolution = Vector2( 256, 64 )
-shader_param/flip = false
-
-[sub_resource type="Shader" id=68]
-code = "shader_type canvas_item;
-
-uniform vec4 base_col: hint_color = vec4(0.27, 0.14, 0.05, 1.0);
-uniform vec2 resolution = vec2(256.0, 64.0);
-uniform bool flip = false;
-
-const float PI = 3.1415;
-
-float sat(float t) {
-    return clamp(t, 0.0, 1.0);
-}
-
-float remap01(float a, float b, float t) {
-    return sat((t - a) / (b - a));
-}
-
-float remap(float a, float b, float c, float d, float t) {
-    return remap01(a, b, t) * (d - c) + c;
-}
-
-float polygon(vec2 position, float radius, float sides){
-	position = position * 2.0 - 1.0;
-	float angle = atan(position.x, position.y);
-	float slice = PI * 2.0 / sides;
-
-	return step(radius, cos(floor(0.5 + angle / slice) * slice - angle) * length(position));
-}
-
-//vec4 rotate(float angle){
-//	return vec4(cos(angle), -sin(angle), sin(angle), cos(angle));
-//}
-
-mat2 rotate(float angle){
-	return mat2(vec2(cos(angle), -sin(angle)), vec2(sin(angle), cos(angle)));
-}
-
-vec2 rotateUVmatrinx(vec2 uv, vec2 pivot, float rotation){
-    mat2 rotation_matrix=mat2(  vec2(sin(rotation),-cos(rotation)),
-                                vec2(cos(rotation),sin(rotation))
-                                );
-    uv -= pivot;
-    uv= uv*rotation_matrix;
-    uv += pivot;
-    return uv;
-}
-
-float rect(vec2 uv, vec2 size) {
-    float blur = 0.000;
-    // 让 size 成正比
-    size = 0.5 - size * 0.5;
-    // 先画一边
-    vec2 r = vec2(step(size.x, uv.x), step(size.y, uv.y));
-    // 再画相反的边，相乘得出相交位置就是对应的矩形
-    r *= vec2(step(size.x, 1.0 - uv.x), step(size.y, 1.0 - uv.y));
-    // x 和 y 相乘得出矩形的像素点值
-    return r.x * r.y;
-}
-
-float circle(vec2 uv, float r) {
-    uv -= 0.5;
-    uv.x *= resolution.x / resolution.y;
-    float blur = 0.005;
-    
-    // 用 uv 做长度,点距离零点的距离会呈圆形递增
-    float d = length(uv);
-    d = step(d, r);
-    return d;
-}
-
-
-void fragment() {
-	vec4 col = base_col;
-	vec2 uv = UV;
-//	uv.x *= -1.0;
-	if (flip) {
-		uv.x = 1.0 - abs(uv.x);
-	}
-	
-//    uv = rotateUVmatrinx(uv, vec2(0.5), -45.03);
-//	uv = rotateUVmatrinx(UV, vec2(0.52), TIME);
-//	uv.x *= -1.0;
-	float s = rect(vec2(uv.x+0.2,uv.y), vec2(1.0));
-	
-	uv -= vec2(0.5);
-	uv = rotate(1.57) * uv;
-	uv += vec2(0.5);
-	s += 1.0 - polygon(vec2(uv.x*0.15+0.2,uv.y+0.45), 0.4, 3);
-	s = min(s, 1.0);
-	col.a = s;
-	
-	COLOR = col;
-}"
-
-[sub_resource type="ShaderMaterial" id=69]
-resource_local_to_scene = true
-shader = SubResource( 68 )
-shader_param/base_col = Color( 0.937255, 0.717647, 0.458824, 1 )
-shader_param/resolution = Vector2( 256, 64 )
-shader_param/flip = false
-
-[sub_resource type="Shader" id=70]
-code = "shader_type canvas_item;
-
-uniform vec4 base_col: hint_color = vec4(0.27, 0.14, 0.05, 1.0);
-uniform vec2 resolution = vec2(256.0, 64.0);
-uniform bool flip = false;
-
-const float PI = 3.1415;
-
-float sat(float t) {
-    return clamp(t, 0.0, 1.0);
-}
-
-float remap01(float a, float b, float t) {
-    return sat((t - a) / (b - a));
-}
-
-float remap(float a, float b, float c, float d, float t) {
-    return remap01(a, b, t) * (d - c) + c;
-}
-
-float polygon(vec2 position, float radius, float sides){
-	position = position * 2.0 - 1.0;
-	float angle = atan(position.x, position.y);
-	float slice = PI * 2.0 / sides;
-
-	return step(radius, cos(floor(0.5 + angle / slice) * slice - angle) * length(position));
-}
-
-//vec4 rotate(float angle){
-//	return vec4(cos(angle), -sin(angle), sin(angle), cos(angle));
-//}
-
-mat2 rotate(float angle){
-	return mat2(vec2(cos(angle), -sin(angle)), vec2(sin(angle), cos(angle)));
-}
-
-vec2 rotateUVmatrinx(vec2 uv, vec2 pivot, float rotation){
-    mat2 rotation_matrix=mat2(  vec2(sin(rotation),-cos(rotation)),
-                                vec2(cos(rotation),sin(rotation))
-                                );
-    uv -= pivot;
-    uv= uv*rotation_matrix;
-    uv += pivot;
-    return uv;
-}
-
-float rect(vec2 uv, vec2 size) {
-    float blur = 0.000;
-    // 让 size 成正比
-    size = 0.5 - size * 0.5;
-    // 先画一边
-    vec2 r = vec2(step(size.x, uv.x), step(size.y, uv.y));
-    // 再画相反的边，相乘得出相交位置就是对应的矩形
-    r *= vec2(step(size.x, 1.0 - uv.x), step(size.y, 1.0 - uv.y));
-    // x 和 y 相乘得出矩形的像素点值
-    return r.x * r.y;
-}
-
-float circle(vec2 uv, float r) {
-    uv -= 0.5;
-    uv.x *= resolution.x / resolution.y;
-    float blur = 0.005;
-    
-    // 用 uv 做长度,点距离零点的距离会呈圆形递增
-    float d = length(uv);
-    d = step(d, r);
-    return d;
-}
-
-
-void fragment() {
-	vec4 col = base_col;
-	vec2 uv = UV;
-//	uv.x *= -1.0;
-	if (flip) {
-		uv.x = 1.0 - abs(uv.x);
-	}
-	
-//    uv = rotateUVmatrinx(uv, vec2(0.5), -45.03);
-//	uv = rotateUVmatrinx(UV, vec2(0.52), TIME);
-//	uv.x *= -1.0;
-	float s = rect(vec2(uv.x+0.2,uv.y), vec2(1.0));
-	
-	uv -= vec2(0.5);
-	uv = rotate(1.57) * uv;
-	uv += vec2(0.5);
-	s += 1.0 - polygon(vec2(uv.x*0.15+0.2,uv.y+0.45), 0.4, 3);
-	s = min(s, 1.0);
-	col.a = s;
-	
-	COLOR = col;
-}"
-
-[sub_resource type="ShaderMaterial" id=71]
-shader = SubResource( 70 )
-shader_param/base_col = Color( 0.419608, 0.188235, 0.109804, 1 )
-shader_param/resolution = Vector2( 256, 64 )
-shader_param/flip = true
-
-[sub_resource type="Shader" id=72]
-code = "shader_type canvas_item;
-
-uniform vec4 base_col: hint_color = vec4(0.27, 0.14, 0.05, 1.0);
-uniform vec2 resolution = vec2(256.0, 64.0);
-uniform bool flip = false;
-
-const float PI = 3.1415;
-
-float sat(float t) {
-    return clamp(t, 0.0, 1.0);
-}
-
-float remap01(float a, float b, float t) {
-    return sat((t - a) / (b - a));
-}
-
-float remap(float a, float b, float c, float d, float t) {
-    return remap01(a, b, t) * (d - c) + c;
-}
-
-float polygon(vec2 position, float radius, float sides){
-	position = position * 2.0 - 1.0;
-	float angle = atan(position.x, position.y);
-	float slice = PI * 2.0 / sides;
-
-	return step(radius, cos(floor(0.5 + angle / slice) * slice - angle) * length(position));
-}
-
-//vec4 rotate(float angle){
-//	return vec4(cos(angle), -sin(angle), sin(angle), cos(angle));
-//}
-
-mat2 rotate(float angle){
-	return mat2(vec2(cos(angle), -sin(angle)), vec2(sin(angle), cos(angle)));
-}
-
-vec2 rotateUVmatrinx(vec2 uv, vec2 pivot, float rotation){
-    mat2 rotation_matrix=mat2(  vec2(sin(rotation),-cos(rotation)),
-                                vec2(cos(rotation),sin(rotation))
-                                );
-    uv -= pivot;
-    uv= uv*rotation_matrix;
-    uv += pivot;
-    return uv;
-}
-
-float rect(vec2 uv, vec2 size) {
-    float blur = 0.000;
-    // 让 size 成正比
-    size = 0.5 - size * 0.5;
-    // 先画一边
-    vec2 r = vec2(step(size.x, uv.x), step(size.y, uv.y));
-    // 再画相反的边，相乘得出相交位置就是对应的矩形
-    r *= vec2(step(size.x, 1.0 - uv.x), step(size.y, 1.0 - uv.y));
-    // x 和 y 相乘得出矩形的像素点值
-    return r.x * r.y;
-}
-
-float circle(vec2 uv, float r) {
-    uv -= 0.5;
-    uv.x *= resolution.x / resolution.y;
-    float blur = 0.005;
-    
-    // 用 uv 做长度,点距离零点的距离会呈圆形递增
-    float d = length(uv);
-    d = step(d, r);
-    return d;
-}
-
-
-void fragment() {
-	vec4 col = base_col;
-	vec2 uv = UV;
-//	uv.x *= -1.0;
-	if (flip) {
-		uv.x = 1.0 - abs(uv.x);
-	}
-	
-//    uv = rotateUVmatrinx(uv, vec2(0.5), -45.03);
-//	uv = rotateUVmatrinx(UV, vec2(0.52), TIME);
-//	uv.x *= -1.0;
-	float s = rect(vec2(uv.x+0.2,uv.y), vec2(1.0));
-	
-	uv -= vec2(0.5);
-	uv = rotate(1.57) * uv;
-	uv += vec2(0.5);
-	s += 1.0 - polygon(vec2(uv.x*0.15+0.2,uv.y+0.45), 0.4, 3);
-	s = min(s, 1.0);
-	col.a = s;
-	
-	COLOR = col;
-}"
-
-[sub_resource type="ShaderMaterial" id=73]
-shader = SubResource( 72 )
-shader_param/base_col = Color( 0.419608, 0.188235, 0.109804, 1 )
-shader_param/resolution = Vector2( 256, 64 )
-shader_param/flip = true
-
-[sub_resource type="Shader" id=74]
-code = "shader_type canvas_item;
-
-uniform vec4 base_col: hint_color = vec4(0.27, 0.14, 0.05, 1.0);
-uniform vec2 resolution = vec2(256.0, 64.0);
-uniform bool flip = false;
-
-const float PI = 3.1415;
-
-float sat(float t) {
-    return clamp(t, 0.0, 1.0);
-}
-
-float remap01(float a, float b, float t) {
-    return sat((t - a) / (b - a));
-}
-
-float remap(float a, float b, float c, float d, float t) {
-    return remap01(a, b, t) * (d - c) + c;
-}
-
-float polygon(vec2 position, float radius, float sides){
-	position = position * 2.0 - 1.0;
-	float angle = atan(position.x, position.y);
-	float slice = PI * 2.0 / sides;
-
-	return step(radius, cos(floor(0.5 + angle / slice) * slice - angle) * length(position));
-}
-
-//vec4 rotate(float angle){
-//	return vec4(cos(angle), -sin(angle), sin(angle), cos(angle));
-//}
-
-mat2 rotate(float angle){
-	return mat2(vec2(cos(angle), -sin(angle)), vec2(sin(angle), cos(angle)));
-}
-
-vec2 rotateUVmatrinx(vec2 uv, vec2 pivot, float rotation){
-    mat2 rotation_matrix=mat2(  vec2(sin(rotation),-cos(rotation)),
-                                vec2(cos(rotation),sin(rotation))
-                                );
-    uv -= pivot;
-    uv= uv*rotation_matrix;
-    uv += pivot;
-    return uv;
-}
-
-float rect(vec2 uv, vec2 size) {
-    float blur = 0.000;
-    // 让 size 成正比
-    size = 0.5 - size * 0.5;
-    // 先画一边
-    vec2 r = vec2(step(size.x, uv.x), step(size.y, uv.y));
-    // 再画相反的边，相乘得出相交位置就是对应的矩形
-    r *= vec2(step(size.x, 1.0 - uv.x), step(size.y, 1.0 - uv.y));
-    // x 和 y 相乘得出矩形的像素点值
-    return r.x * r.y;
-}
-
-float circle(vec2 uv, float r) {
-    uv -= 0.5;
-    uv.x *= resolution.x / resolution.y;
-    float blur = 0.005;
-    
-    // 用 uv 做长度,点距离零点的距离会呈圆形递增
-    float d = length(uv);
-    d = step(d, r);
-    return d;
-}
-
-
-void fragment() {
-	vec4 col = base_col;
-	vec2 uv = UV;
-//	uv.x *= -1.0;
-	if (flip) {
-		uv.x = 1.0 - abs(uv.x);
-	}
-	
-//    uv = rotateUVmatrinx(uv, vec2(0.5), -45.03);
-//	uv = rotateUVmatrinx(UV, vec2(0.52), TIME);
-//	uv.x *= -1.0;
-	float s = rect(vec2(uv.x+0.2,uv.y), vec2(1.0));
-	
-	uv -= vec2(0.5);
-	uv = rotate(1.57) * uv;
-	uv += vec2(0.5);
-	s += 1.0 - polygon(vec2(uv.x*0.15+0.2,uv.y+0.45), 0.4, 3);
-	s = min(s, 1.0);
-	col.a = s;
-	
-	COLOR = col;
-}"
-
-[sub_resource type="ShaderMaterial" id=75]
-shader = SubResource( 74 )
-shader_param/base_col = Color( 0.419608, 0.188235, 0.109804, 1 )
-shader_param/resolution = Vector2( 256, 64 )
-shader_param/flip = true
-
-[sub_resource type="Shader" id=76]
-code = "shader_type canvas_item;
-
-uniform vec4 base_col: hint_color = vec4(0.27, 0.14, 0.05, 1.0);
-uniform vec2 resolution = vec2(256.0, 64.0);
-uniform bool flip = false;
-
-const float PI = 3.1415;
-
-float sat(float t) {
-    return clamp(t, 0.0, 1.0);
-}
-
-float remap01(float a, float b, float t) {
-    return sat((t - a) / (b - a));
-}
-
-float remap(float a, float b, float c, float d, float t) {
-    return remap01(a, b, t) * (d - c) + c;
-}
-
-float polygon(vec2 position, float radius, float sides){
-	position = position * 2.0 - 1.0;
-	float angle = atan(position.x, position.y);
-	float slice = PI * 2.0 / sides;
-
-	return step(radius, cos(floor(0.5 + angle / slice) * slice - angle) * length(position));
-}
-
-//vec4 rotate(float angle){
-//	return vec4(cos(angle), -sin(angle), sin(angle), cos(angle));
-//}
-
-mat2 rotate(float angle){
-	return mat2(vec2(cos(angle), -sin(angle)), vec2(sin(angle), cos(angle)));
-}
-
-vec2 rotateUVmatrinx(vec2 uv, vec2 pivot, float rotation){
-    mat2 rotation_matrix=mat2(  vec2(sin(rotation),-cos(rotation)),
-                                vec2(cos(rotation),sin(rotation))
-                                );
-    uv -= pivot;
-    uv= uv*rotation_matrix;
-    uv += pivot;
-    return uv;
-}
-
-float rect(vec2 uv, vec2 size) {
-    float blur = 0.000;
-    // 让 size 成正比
-    size = 0.5 - size * 0.5;
-    // 先画一边
-    vec2 r = vec2(step(size.x, uv.x), step(size.y, uv.y));
-    // 再画相反的边，相乘得出相交位置就是对应的矩形
-    r *= vec2(step(size.x, 1.0 - uv.x), step(size.y, 1.0 - uv.y));
-    // x 和 y 相乘得出矩形的像素点值
-    return r.x * r.y;
-}
-
-float circle(vec2 uv, float r) {
-    uv -= 0.5;
-    uv.x *= resolution.x / resolution.y;
-    float blur = 0.005;
-    
-    // 用 uv 做长度,点距离零点的距离会呈圆形递增
-    float d = length(uv);
-    d = step(d, r);
-    return d;
-}
-
-
-void fragment() {
-	vec4 col = base_col;
-	vec2 uv = UV;
-//	uv.x *= -1.0;
-	if (flip) {
-		uv.x = 1.0 - abs(uv.x);
-	}
-	
-//    uv = rotateUVmatrinx(uv, vec2(0.5), -45.03);
-//	uv = rotateUVmatrinx(UV, vec2(0.52), TIME);
-//	uv.x *= -1.0;
-	float s = rect(vec2(uv.x+0.2,uv.y), vec2(1.0));
-	
-	uv -= vec2(0.5);
-	uv = rotate(1.57) * uv;
-	uv += vec2(0.5);
-	s += 1.0 - polygon(vec2(uv.x*0.15+0.2,uv.y+0.45), 0.4, 3);
-	s = min(s, 1.0);
-	col.a = s;
-	
-	COLOR = col;
-}"
-
-[sub_resource type="ShaderMaterial" id=77]
-shader = SubResource( 76 )
-shader_param/base_col = Color( 0.419608, 0.188235, 0.109804, 1 )
-shader_param/resolution = Vector2( 256, 64 )
-shader_param/flip = true
-
-[sub_resource type="Shader" id=78]
-code = "shader_type canvas_item;
-
-uniform vec4 base_col: hint_color = vec4(0.27, 0.14, 0.05, 1.0);
-uniform vec2 resolution = vec2(256.0, 64.0);
-uniform bool flip = false;
-
-const float PI = 3.1415;
-
-float sat(float t) {
-    return clamp(t, 0.0, 1.0);
-}
-
-float remap01(float a, float b, float t) {
-    return sat((t - a) / (b - a));
-}
-
-float remap(float a, float b, float c, float d, float t) {
-    return remap01(a, b, t) * (d - c) + c;
-}
-
-float polygon(vec2 position, float radius, float sides){
-	position = position * 2.0 - 1.0;
-	float angle = atan(position.x, position.y);
-	float slice = PI * 2.0 / sides;
-
-	return step(radius, cos(floor(0.5 + angle / slice) * slice - angle) * length(position));
-}
-
-//vec4 rotate(float angle){
-//	return vec4(cos(angle), -sin(angle), sin(angle), cos(angle));
-//}
-
-mat2 rotate(float angle){
-	return mat2(vec2(cos(angle), -sin(angle)), vec2(sin(angle), cos(angle)));
-}
-
-vec2 rotateUVmatrinx(vec2 uv, vec2 pivot, float rotation){
-    mat2 rotation_matrix=mat2(  vec2(sin(rotation),-cos(rotation)),
-                                vec2(cos(rotation),sin(rotation))
-                                );
-    uv -= pivot;
-    uv= uv*rotation_matrix;
-    uv += pivot;
-    return uv;
-}
-
-float rect(vec2 uv, vec2 size) {
-    float blur = 0.000;
-    // 让 size 成正比
-    size = 0.5 - size * 0.5;
-    // 先画一边
-    vec2 r = vec2(step(size.x, uv.x), step(size.y, uv.y));
-    // 再画相反的边，相乘得出相交位置就是对应的矩形
-    r *= vec2(step(size.x, 1.0 - uv.x), step(size.y, 1.0 - uv.y));
-    // x 和 y 相乘得出矩形的像素点值
-    return r.x * r.y;
-}
-
-float circle(vec2 uv, float r) {
-    uv -= 0.5;
-    uv.x *= resolution.x / resolution.y;
-    float blur = 0.005;
-    
-    // 用 uv 做长度,点距离零点的距离会呈圆形递增
-    float d = length(uv);
-    d = step(d, r);
-    return d;
-}
-
-
-void fragment() {
-	vec4 col = base_col;
-	vec2 uv = UV;
-//	uv.x *= -1.0;
-	if (flip) {
-		uv.x = 1.0 - abs(uv.x);
-	}
-	
-//    uv = rotateUVmatrinx(uv, vec2(0.5), -45.03);
-//	uv = rotateUVmatrinx(UV, vec2(0.52), TIME);
-//	uv.x *= -1.0;
-	float s = rect(vec2(uv.x+0.2,uv.y), vec2(1.0));
-	
-	uv -= vec2(0.5);
-	uv = rotate(1.57) * uv;
-	uv += vec2(0.5);
-	s += 1.0 - polygon(vec2(uv.x*0.15+0.2,uv.y+0.45), 0.4, 3);
-	s = min(s, 1.0);
-	col.a = s;
-	
-	COLOR = col;
-}"
-
-[sub_resource type="ShaderMaterial" id=79]
-shader = SubResource( 78 )
-shader_param/base_col = Color( 0.419608, 0.188235, 0.109804, 1 )
-shader_param/resolution = Vector2( 256, 64 )
-shader_param/flip = true
-
-[sub_resource type="Shader" id=80]
-code = "shader_type canvas_item;
-
-uniform vec4 base_col: hint_color = vec4(0.27, 0.14, 0.05, 1.0);
-uniform vec2 resolution = vec2(256.0, 64.0);
-uniform bool flip = false;
-
-const float PI = 3.1415;
-
-float sat(float t) {
-    return clamp(t, 0.0, 1.0);
-}
-
-float remap01(float a, float b, float t) {
-    return sat((t - a) / (b - a));
-}
-
-float remap(float a, float b, float c, float d, float t) {
-    return remap01(a, b, t) * (d - c) + c;
-}
-
-float polygon(vec2 position, float radius, float sides){
-	position = position * 2.0 - 1.0;
-	float angle = atan(position.x, position.y);
-	float slice = PI * 2.0 / sides;
-
-	return step(radius, cos(floor(0.5 + angle / slice) * slice - angle) * length(position));
-}
-
-//vec4 rotate(float angle){
-//	return vec4(cos(angle), -sin(angle), sin(angle), cos(angle));
-//}
-
-mat2 rotate(float angle){
-	return mat2(vec2(cos(angle), -sin(angle)), vec2(sin(angle), cos(angle)));
-}
-
-vec2 rotateUVmatrinx(vec2 uv, vec2 pivot, float rotation){
-    mat2 rotation_matrix=mat2(  vec2(sin(rotation),-cos(rotation)),
-                                vec2(cos(rotation),sin(rotation))
-                                );
-    uv -= pivot;
-    uv= uv*rotation_matrix;
-    uv += pivot;
-    return uv;
-}
-
-float rect(vec2 uv, vec2 size) {
-    float blur = 0.000;
-    // 让 size 成正比
-    size = 0.5 - size * 0.5;
-    // 先画一边
-    vec2 r = vec2(step(size.x, uv.x), step(size.y, uv.y));
-    // 再画相反的边，相乘得出相交位置就是对应的矩形
-    r *= vec2(step(size.x, 1.0 - uv.x), step(size.y, 1.0 - uv.y));
-    // x 和 y 相乘得出矩形的像素点值
-    return r.x * r.y;
-}
-
-float circle(vec2 uv, float r) {
-    uv -= 0.5;
-    uv.x *= resolution.x / resolution.y;
-    float blur = 0.005;
-    
-    // 用 uv 做长度,点距离零点的距离会呈圆形递增
-    float d = length(uv);
-    d = step(d, r);
-    return d;
-}
-
-
-void fragment() {
-	vec4 col = base_col;
-	vec2 uv = UV;
-//	uv.x *= -1.0;
-	if (flip) {
-		uv.x = 1.0 - abs(uv.x);
-	}
-	
-//    uv = rotateUVmatrinx(uv, vec2(0.5), -45.03);
-//	uv = rotateUVmatrinx(UV, vec2(0.52), TIME);
-//	uv.x *= -1.0;
-	float s = rect(vec2(uv.x+0.2,uv.y), vec2(1.0));
-	
-	uv -= vec2(0.5);
-	uv = rotate(1.57) * uv;
-	uv += vec2(0.5);
-	s += 1.0 - polygon(vec2(uv.x*0.15+0.2,uv.y+0.45), 0.4, 3);
-	s = min(s, 1.0);
-	col.a = s;
-	
-	COLOR = col;
-}"
-
-[sub_resource type="ShaderMaterial" id=81]
-resource_local_to_scene = true
-shader = SubResource( 80 )
-shader_param/base_col = Color( 0.937255, 0.717647, 0.458824, 1 )
-shader_param/resolution = Vector2( 256, 64 )
-shader_param/flip = true
 
 [sub_resource type="Shader" id=30]
 code = "shader_type canvas_item;
@@ -1377,7 +282,7 @@ code = "shader_type canvas_item;
 
 uniform vec4 base_col: hint_color = vec4(0.27, 0.14, 0.05, 1.0);
 uniform vec2 resolution = vec2(256.0, 64.0);
-uniform float radius = 0.1;
+uniform float radius = 0.2;
 
 float sat(float t) {
     return clamp(t, 0.0, 1.0);
@@ -1421,7 +326,7 @@ float round_rect(vec2 uv, float r) {
 	float c3 = circle(vec2(uv.x+0.5-r, uv.y-0.5+r), r);
 	float c4 = circle(vec2(uv.x-0.5+r, uv.y+0.5-r), r);
 
-	float rect1 = rect(uv, vec2(1.0 - r * 1.47, 1.0 - r * 2.0));
+	float rect1 = rect(uv, vec2(1.0 - r * 1.5, 1.0 - r * 2.0));
 	float rect2 = rect(uv, vec2(1.0- r *2.0, 1.0));
 
 	float s = min(c1+c2+c3+c4+rect1+rect2, 1.0);
@@ -1429,21 +334,35 @@ float round_rect(vec2 uv, float r) {
 }
 
 void fragment() {
-	vec4 col = base_col;
+	vec4 col = vec4(0.27, 0.14, 0.01, 1.0);
 	vec2 uv = UV;
 
 	float s = round_rect(uv, radius);
 	col.a = s;
 	
+	
+	float offset = 0.12;
+	s = round_rect(uv*(1.0 + offset) - offset / 2.0, radius);
+	col.rgb = mix(col.rgb, vec3(0.86, 0.59, 0.52), s);
+	
+	offset = 0.2;
+	uv.y = uv.y * 0.7 + 0.15;
+	s = rect(uv*(1.0 + offset) - offset / 2.0, vec2(0.7));
+	col.rgb = mix(col.rgb, vec3(0.27, 0.14, 0.01), s);
+//	uv *= 1.5;
+//	uv -= 0.5;
+//	s = round_rect(uv, radius);
+//	col.rgb = mix(col.rgb, col.rgb*1.5, 1.0 - s); 
+	
 	COLOR = col;
 }"
 
-[sub_resource type="ShaderMaterial" id=57]
+[sub_resource type="ShaderMaterial" id=97]
 resource_local_to_scene = true
 shader = SubResource( 32 )
 shader_param/base_col = Color( 0.419608, 0.188235, 0.109804, 1 )
-shader_param/resolution = Vector2( 120, 32 )
-shader_param/radius = 0.1
+shader_param/resolution = Vector2( 130, 32 )
+shader_param/radius = 0.2
 
 [sub_resource type="AtlasTexture" id=82]
 atlas = ExtResource( 10 )
@@ -1478,6 +397,7 @@ animations = [ {
 } ]
 
 [node name="Main" type="Node2D"]
+script = ExtResource( 12 )
 
 [node name="UI" type="Control" parent="."]
 margin_right = 40.0
@@ -1583,13 +503,11 @@ texture = ExtResource( 4 )
 expand = true
 
 [node name="HpBar" parent="UI/Top/MarginContainer/HBoxContainer/Player" instance=ExtResource( 3 )]
+material = SubResource( 95 )
 margin_left = 72.0
 margin_top = 6.0
 margin_right = 562.0
 margin_bottom = 54.0
-rect_min_size = Vector2( 490, 48 )
-size_flags_horizontal = 0
-size_flags_vertical = 6
 
 [node name="RichTextLabel" type="RichTextLabel" parent="UI/Top/MarginContainer/HBoxContainer"]
 margin_left = 566.0
@@ -1598,7 +516,7 @@ margin_bottom = 60.0
 rect_min_size = Vector2( 84, 60 )
 size_flags_vertical = 6
 custom_colors/default_color = Color( 0.937255, 0.717647, 0.458824, 1 )
-custom_fonts/normal_font = SubResource( 1 )
+custom_fonts/normal_font = SubResource( 94 )
 bbcode_enabled = true
 bbcode_text = "[center]VS[/center]"
 text = "VS"
@@ -1611,13 +529,9 @@ margin_bottom = 60.0
 custom_constants/separation = 12
 
 [node name="HpBar" parent="UI/Top/MarginContainer/HBoxContainer/Enemy" instance=ExtResource( 3 )]
-margin_left = 0.0
+material = SubResource( 96 )
 margin_top = 6.0
-margin_right = 490.0
 margin_bottom = 54.0
-rect_min_size = Vector2( 490, 48 )
-size_flags_horizontal = 0
-size_flags_vertical = 6
 
 [node name="Portrait" type="TextureRect" parent="UI/Top/MarginContainer/HBoxContainer/Enemy"]
 margin_left = 502.0
@@ -1635,9 +549,9 @@ anchor_left = 1.0
 anchor_top = 0.2
 anchor_right = 1.0
 anchor_bottom = 0.2
-margin_left = -232.0
+margin_left = -213.0
 margin_top = -10.0
-margin_right = 24.0
+margin_right = 43.0
 margin_bottom = 54.0
 rect_min_size = Vector2( 256, 64 )
 rect_scale = Vector2( 1, 1.00859 )
@@ -1652,6 +566,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 size_flags_horizontal = 3
 size_flags_vertical = 6
+custom_colors/font_color = Color( 0.937255, 0.717647, 0.458824, 1 )
 custom_fonts/font = SubResource( 29 )
 text = "Reason"
 align = 1
@@ -1669,35 +584,6 @@ __meta__ = {
 "_edit_lock_": true
 }
 
-[node name="Action" parent="UI/PlayerActionPanel" instance=ExtResource( 8 )]
-material = SubResource( 59 )
-
-[node name="Action2" parent="UI/PlayerActionPanel" instance=ExtResource( 8 )]
-material = SubResource( 61 )
-margin_top = 96.0
-margin_bottom = 160.0
-
-[node name="Action3" parent="UI/PlayerActionPanel" instance=ExtResource( 8 )]
-material = SubResource( 63 )
-margin_top = 192.0
-margin_bottom = 256.0
-
-[node name="Action4" parent="UI/PlayerActionPanel" instance=ExtResource( 8 )]
-material = SubResource( 65 )
-margin_top = 288.0
-margin_bottom = 352.0
-
-[node name="Action5" parent="UI/PlayerActionPanel" instance=ExtResource( 8 )]
-material = SubResource( 67 )
-margin_top = 384.0
-margin_bottom = 448.0
-
-[node name="SAction" parent="UI/PlayerActionPanel" instance=ExtResource( 8 )]
-material = SubResource( 69 )
-margin_top = 480.0
-margin_bottom = 544.0
-special = true
-
 [node name="EmenyPanel" type="VBoxContainer" parent="UI"]
 anchor_left = 1.0
 anchor_top = 0.48
@@ -1708,66 +594,6 @@ margin_top = -126.0
 margin_bottom = 126.0
 rect_pivot_offset = Vector2( 162, 95 )
 custom_constants/separation = 12
-
-[node name="Action1" parent="UI/EmenyPanel" instance=ExtResource( 8 )]
-material = SubResource( 71 )
-margin_right = 140.0
-margin_bottom = 32.0
-rect_min_size = Vector2( 0, 32 )
-mouse_default_cursor_shape = 0
-flip = true
-font_visible = false
-
-[node name="Action2" parent="UI/EmenyPanel" instance=ExtResource( 8 )]
-material = SubResource( 73 )
-margin_top = 44.0
-margin_right = 140.0
-margin_bottom = 76.0
-rect_min_size = Vector2( 0, 32 )
-mouse_default_cursor_shape = 0
-flip = true
-font_visible = false
-
-[node name="Action3" parent="UI/EmenyPanel" instance=ExtResource( 8 )]
-material = SubResource( 75 )
-margin_top = 88.0
-margin_right = 140.0
-margin_bottom = 120.0
-rect_min_size = Vector2( 0, 32 )
-mouse_default_cursor_shape = 0
-flip = true
-font_visible = false
-
-[node name="Action4" parent="UI/EmenyPanel" instance=ExtResource( 8 )]
-material = SubResource( 77 )
-margin_top = 132.0
-margin_right = 140.0
-margin_bottom = 164.0
-rect_min_size = Vector2( 0, 32 )
-mouse_default_cursor_shape = 0
-flip = true
-font_visible = false
-
-[node name="Action5" parent="UI/EmenyPanel" instance=ExtResource( 8 )]
-material = SubResource( 79 )
-margin_top = 176.0
-margin_right = 140.0
-margin_bottom = 208.0
-rect_min_size = Vector2( 0, 32 )
-mouse_default_cursor_shape = 0
-flip = true
-font_visible = false
-
-[node name="SAction" parent="UI/EmenyPanel" instance=ExtResource( 8 )]
-material = SubResource( 81 )
-margin_top = 220.0
-margin_right = 140.0
-margin_bottom = 252.0
-rect_min_size = Vector2( 0, 32 )
-mouse_default_cursor_shape = 0
-special = true
-flip = true
-font_visible = false
 
 [node name="ActionStack" type="Panel" parent="UI"]
 material = SubResource( 31 )
@@ -1796,20 +622,7 @@ custom_constants/separation = 10
 alignment = 2
 
 [node name="StackItem" parent="UI/ActionStack/MarginContainer/VBoxContainer" instance=ExtResource( 9 )]
-material = SubResource( 57 )
-
-[node name="StackItem2" parent="UI/ActionStack/MarginContainer/VBoxContainer" instance=ExtResource( 9 )]
-material = SubResource( 57 )
-margin_top = 48.0
-margin_bottom = 80.0
-
-[node name="StackItem3" parent="UI/ActionStack/MarginContainer/VBoxContainer" instance=ExtResource( 9 )]
-material = SubResource( 57 )
-margin_top = 90.0
-margin_bottom = 122.0
-
-[node name="StackItem4" parent="UI/ActionStack/MarginContainer/VBoxContainer" instance=ExtResource( 9 )]
-material = SubResource( 57 )
+material = SubResource( 97 )
 margin_top = 132.0
 margin_bottom = 164.0
 
@@ -1818,7 +631,6 @@ position = Vector2( 537, 464 )
 scale = Vector2( 4, 4 )
 frames = SubResource( 86 )
 animation = "lde"
-frame = 1
 playing = true
 
 [node name="Ghost" type="AnimatedSprite" parent="."]
@@ -1826,5 +638,4 @@ position = Vector2( 746, 341 )
 scale = Vector2( 4, 4 )
 frames = SubResource( 85 )
 animation = "lde"
-frame = 1
 playing = true

@@ -1,0 +1,39 @@
+[
+  {
+    "id": "reason",
+    "name": {
+      "zh": "道理",
+      "en": ""
+    },
+    "type": "normal",
+    "custom_process": "",
+    "color": ""
+  },
+  {
+    "id": "empathy",
+    "name": {
+      "zh": "共情"
+    },
+    "color": "",
+    "type": "normal",
+    "custom_process": ""
+  },
+  {
+    "id": "threaten",
+    "name": {
+      "zh": "威胁"
+    },
+    "type": "normal",
+    "color": "",
+    "custom_process": ""
+  },
+  {
+    "id": "ignore",
+    "name": {
+      "zh": "无视"
+    },
+    "type": "special",
+    "color": "",
+    "custom_process": ""
+  }
+]

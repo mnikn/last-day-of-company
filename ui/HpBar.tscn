@@ -2,11 +2,12 @@
 
 [ext_resource path="res://ui/HpBar.gd" type="Script" id=1]
 
-[sub_resource type="Shader" id=3]
+[sub_resource type="Shader" id=1]
 code = "shader_type canvas_item;
 
 uniform vec4 base_color: hint_color = vec4(1.0, 0.2, 0.1, 1.0);
 uniform vec2 resolution = vec2(492.0, 40.0);
+uniform bool flip = false;
 
 float rect(vec2 uv, vec2 size) {
     float blur = 0.000;
@@ -51,7 +52,9 @@ void fragment()
 {
     // Normalized pixel coordinates (from 0 to 1)
     vec2 uv = UV;
-    
+	if (flip) {
+		uv.x = 1.0 - uv.x;
+	}
 	
 	vec4 col = base_color;
     
@@ -60,6 +63,13 @@ void fragment()
     
     float t = round_rect(uv, resolution);
     col.a = t;
+	
+	// outline
+	float offset = 0.005;
+	uv.y *= 1.05;
+	uv.x += offset;
+	t = round_rect(uv*(1.0 + offset) - offset / 2.0, resolution);
+	col.rgb = mix(col.rgb, col.rgb * 0.2, 1.0 - t);
     
     // highlight
     float hy = uv.y;
@@ -76,14 +86,16 @@ void fragment()
 }"
 
 [sub_resource type="ShaderMaterial" id=2]
-shader = SubResource( 3 )
+resource_local_to_scene = true
+shader = SubResource( 1 )
 shader_param/base_color = Color( 0.763672, 0.207974, 0.207974, 1 )
 shader_param/resolution = Vector2( 490, 48 )
+shader_param/flip = false
 
 [node name="HpBar" type="ColorRect"]
 material = SubResource( 2 )
-margin_left = 70.0
-margin_top = 31.0
-margin_right = 550.0
-margin_bottom = 79.0
+margin_right = 490.0
+margin_bottom = 48.0
+rect_min_size = Vector2( 490, 48 )
+size_flags_vertical = 6
 script = ExtResource( 1 )

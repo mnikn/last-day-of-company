@@ -8,11 +8,43 @@
 
 config_version=4
 
+_global_script_classes=[ {
+"base": "Node",
+"class": "ArrayUtils",
+"language": "GDScript",
+"path": "res://utils/Array.gd"
+}, {
+"base": "Node",
+"class": "DictUtils",
+"language": "GDScript",
+"path": "res://utils/Dict.gd"
+}, {
+"base": "Node",
+"class": "JsonUtils",
+"language": "GDScript",
+"path": "res://utils/Json.gd"
+}, {
+"base": "Node",
+"class": "NodeUtils",
+"language": "GDScript",
+"path": "res://utils/Node.gd"
+} ]
+_global_script_class_icons={
+"ArrayUtils": "",
+"DictUtils": "",
+"JsonUtils": "",
+"NodeUtils": ""
+}
+
 [application]
 
 config/name="Last-day-of-company"
 run/main_scene="res://Main.tscn"
 config/icon="res://icon.png"
+
+[autoload]
+
+I18n="*res://platforms/I18n.gd"
 
 [display]
 

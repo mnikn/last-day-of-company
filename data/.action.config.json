@@ -1,0 +1,68 @@
+{
+  "i18n": [
+    "zh",
+    "en"
+  ],
+  "schema": {
+    "type": "object",
+    "fields": {
+      "id": {
+        "name": "id",
+        "config": {
+          "colSpan": 3,
+          "defaultValue": "",
+          "type": "singleline"
+        },
+        "type": "string"
+      },
+      "name": {
+        "name": "name",
+        "config": {
+          "colSpan": 3,
+          "defaultValue": "",
+          "type": "singleline",
+          "needI18n": true
+        },
+        "type": "string"
+      },
+      "type": {
+        "name": "type",
+        "config": {
+          "colSpan": 3,
+          "options": [
+            "normal",
+            "special"
+          ],
+          "defaultValue": "normal"
+        },
+        "type": "select"
+      },
+      "color": {
+        "name": "color",
+        "config": {
+          "colSpan": 3,
+          "defaultValue": "",
+          "type": "singleline",
+          "enableWhen": "(v) => v.type === 'normal'"
+        },
+        "type": "string"
+      },
+      "custom_process": {
+        "name": "custom_process",
+        "config": {
+          "colSpan": 12,
+          "defaultValue": "",
+          "type": "multiline",
+          "enableWhen": "(v) => v.type === 'special'"
+        },
+        "type": "string"
+      }
+    },
+    "config": {
+      "colSpan": 12,
+      "enableWhen": null,
+      "initialExpand": true,
+      "summary": "#{{___index}} {{id}} - {{name}}"
+    }
+  }
+}
