@@ -1,4 +1,4 @@
-[gd_scene load_steps=29 format=2]
+[gd_scene load_steps=30 format=2]
 
 [ext_resource path="res://ui/BgBlock.tscn" type="PackedScene" id=1]
 [ext_resource path="res://assets/ui/scene/scene.png" type="Texture" id=2]
@@ -6,6 +6,7 @@
 [ext_resource path="res://assets/ui/portrait/main_character.png" type="Texture" id=4]
 [ext_resource path="res://assets/ui/portrait/normal_ghost.png" type="Texture" id=5]
 [ext_resource path="res://assets/fonts/blowbrush.ttf" type="DynamicFontData" id=6]
+[ext_resource path="res://assets/musics/bgm01.wav" type="AudioStream" id=7]
 [ext_resource path="res://assets/fonts/douyuFont-2.otf" type="DynamicFontData" id=8]
 [ext_resource path="res://ui/StackItem.tscn" type="PackedScene" id=9]
 [ext_resource path="res://assets/ui/sprites/player/idle.png" type="Texture" id=10]
@@ -663,3 +664,10 @@ frames = SubResource( 85 )
 animation = "lde"
 frame = 1
 playing = true
+
+[node name="BgmPlayer" type="AudioStreamPlayer" parent="."]
+stream = ExtResource( 7 )
+autoplay = true
+
+[node name="SoundEffectPlayer" type="AudioStreamPlayer" parent="."]
+volume_db = 3.0

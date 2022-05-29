@@ -46,6 +46,8 @@ func _on_Action_mouse_entered():
 			self.material.set_shader_param("base_col", Color("6b301c").lightened(0.2))
 		else:
 			self.material.set_shader_param("base_col", Color("efb775").lightened(0.5))
+		$SoundEffectPlayer.stream = load("res://assets/musics/sound_effects/action_hover.wav")
+		$SoundEffectPlayer.play()
 
 
 func _on_Action_mouse_exited():
@@ -62,4 +64,8 @@ func _on_Action_gui_input(event):
 		if event.button_index == BUTTON_LEFT and event.pressed and self.enabled:
 			self.enabled = false
 			self.emit_signal("clicked")
+			
+			$SoundEffectPlayer.stream = load("res://assets/musics/sound_effects/action_clicked.wav")
+			$SoundEffectPlayer.play()
+			
 			print_debug("action triggered")

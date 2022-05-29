@@ -190,7 +190,7 @@ func on_action_selected(player_action, current_node):
 	elif current_node.data.val < enemy_select_action_node.data.val:
 		lost_node = $UI/Top/MarginContainer/HBoxContainer/Player/HpBar
 	if lost_node != null:
-		self.get_tree().create_timer(0.6).connect("timeout", self, "lost_hp_val", [lost_node, lost_node.val - 0.2])
+		self.get_tree().create_timer(0.6).connect("timeout", self, "lost_hp_val", [lost_node])
 	yield(tween, "tween_all_completed")
 	
 	# combat finish and recover
@@ -223,6 +223,9 @@ func show_combat_flash():
 	var tween = Tween.new()
 	self.add_child(tween)
 	
+	$SoundEffectPlayer.stream = load("res://assets/musics/sound_effects/hit.wav")
+	$SoundEffectPlayer.play()
+	
 	tween.interpolate_property(self, "modulate", self.modulate, Color(20, 20, 20), 0.1, Tween.TRANS_EXPO, Tween.EASE_IN_OUT)
 	tween.start()
 	yield(tween, "tween_all_completed")
@@ -233,7 +236,7 @@ func show_combat_flash():
 	
 	tween.queue_free()
 
-func lost_hp_val(node, val):
+func lost_hp_val(node):
 	var tween = Tween.new()
 	self.add_child(tween)
 	var i = 0
@@ -254,5 +257,11 @@ func lost_hp_val(node, val):
 	tween.interpolate_property(node, "val", node.val, node.val - 0.2, 0.3,Tween.TRANS_CUBIC, Tween.EASE_IN_OUT)
 	tween.start()
 	yield(tween, "tween_all_completed")
+	
+	if (node.val - 0.2) <= 0.4  and $BgmPlayer.pitch_scale != 1.5:
+		$BgmPlayer.pitch_scale = 1.5
+		for node in $UI/Bg/BgBlocks.get_children():
+			node.velocity *= 2.0
+	
 	tween.queue_free()
 	
