@@ -34,5 +34,6 @@ custom_colors/font_color = Color( 0.937255, 0.717647, 0.458824, 1 )
 custom_fonts/font = SubResource( 7 )
 text = "Reason"
 
+[connection signal="gui_input" from="." to="." method="_on_Action_gui_input"]
 [connection signal="mouse_entered" from="." to="." method="_on_Action_mouse_entered"]
 [connection signal="mouse_exited" from="." to="." method="_on_Action_mouse_exited"]

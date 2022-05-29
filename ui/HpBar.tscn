@@ -9,6 +9,21 @@ uniform vec4 base_color: hint_color = vec4(1.0, 0.2, 0.1, 1.0);
 uniform vec2 resolution = vec2(492.0, 40.0);
 uniform bool flip = false;
 
+uniform float val: hint_range(0.0, 1.0) = 1.0;
+
+float sat(float t) {
+    return clamp(t, 0.0, 1.0);
+}
+
+float remap01(float a, float b, float t) {
+    return sat((t - a) / (b - a));
+}
+
+float remap(float a, float b, float c, float d, float t) {
+    return remap01(a, b, t) * (d - c) + c;
+}
+
+
 float rect(vec2 uv, vec2 size) {
     float blur = 0.000;
     // 让 size 成正比
@@ -68,18 +83,21 @@ void fragment()
 	float offset = 0.005;
 	uv.y *= 1.05;
 	uv.x += offset;
-	t = round_rect(uv*(1.0 + offset) - offset / 2.0, resolution);
-	col.rgb = mix(col.rgb, col.rgb * 0.2, 1.0 - t);
-    
-    // highlight
+	float t2 = round_rect(uv*(1.0 + offset) - offset / 2.0, resolution);
+	col.rgb = mix(col.rgb, col.rgb * 0.2, 1.0 - t2);
+	
+	// lost
+	float l = smoothstep(val, val + 0.0005, uv.x);
+    col.rgb = mix(col.rgb, col.rgb * 0.2, l);
+	
+	// highlight
     float hy = uv.y;
     hy += sin(TIME*6.+uv.x*12.0) * sin(TIME*3.0) * 0.2;
     float highlight = smoothstep(0.6, 0.6, hy);
     highlight *= 3.0;
-    if (hy <= 0.3) {
+    if (hy <= 0.3 && uv.x >= l) {
         col.rgb *= 1.5;
     }
-       
 
     // Output to screen
     COLOR = col;
@@ -91,6 +109,7 @@ shader = SubResource( 1 )
 shader_param/base_color = Color( 0.763672, 0.207974, 0.207974, 1 )
 shader_param/resolution = Vector2( 490, 48 )
 shader_param/flip = false
+shader_param/val = 1.0
 
 [node name="HpBar" type="ColorRect"]
 material = SubResource( 2 )

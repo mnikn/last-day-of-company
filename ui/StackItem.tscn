@@ -108,6 +108,6 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 custom_colors/font_color = Color( 0.937255, 0.717647, 0.458824, 1 )
 custom_fonts/font = SubResource( 34 )
-text = "Reason"
+text = "道理"
 align = 1
 valign = 1
