@@ -1,7 +1,8 @@
-[gd_scene load_steps=6 format=2]
+[gd_scene load_steps=7 format=2]
 
 [ext_resource path="res://assets/fonts/GlowSansJ-Normal-Medium.otf" type="DynamicFontData" id=1]
 [ext_resource path="res://ui/Dialogue.gd" type="Script" id=2]
+[ext_resource path="res://assets/musics/sound_effects/talk.wav" type="AudioStream" id=3]
 
 [sub_resource type="Shader" id=98]
 code = "shader_type canvas_item;
@@ -120,3 +121,7 @@ bbcode_text = "你跑路了也要考虑下我们接手烂摊子的感受啊~~~"
 text = "你跑路了也要考虑下我们接手烂摊子的感受啊~~~"
 fit_content_height = true
 scroll_active = false
+
+[node name="SoundEffectPlayer" type="AudioStreamPlayer" parent="."]
+stream = ExtResource( 3 )
+volume_db = 3.0

@@ -127,6 +127,8 @@ func generate_enemy_actions():
 	tween.queue_free()
 
 func on_action_selected(player_action, current_node):
+	if $UI/EmenyPanel.get_child_count() <= 0:
+		return
 	var tween = Tween.new()
 	self.add_child(tween)
 	
@@ -259,9 +261,15 @@ func lost_hp_val(node):
 	yield(tween, "tween_all_completed")
 	
 	if (node.val - 0.2) <= 0.4  and $BgmPlayer.pitch_scale != 1.5:
-		$BgmPlayer.pitch_scale = 1.5
+#		$BgmPlayer.pitch_scale = 1.5
 		for node in $UI/Bg/BgBlocks.get_children():
-			node.velocity *= 2.0
+#			node.velocity *= 2.5
+			tween.interpolate_property(node, "velocity", node.velocity, node.velocity * 2.5, 0.2, Tween.TRANS_CUBIC, Tween.EASE_IN_OUT)
+		tween.interpolate_property($UI/Bg, "modulate", $UI/Bg.modulate, Color("#ffbbbb"), 0.2, Tween.TRANS_CUBIC, Tween.EASE_IN_OUT)
+		tween.interpolate_property($BgmPlayer, "pitch_scale", $BgmPlayer.pitch_scale, 1.5, 0.2, Tween.TRANS_CUBIC, Tween.EASE_IN_OUT)
+		tween.start()
+		yield(tween, "tween_all_completed")
+#		$UI/Bg.modulate = Color("#ffbbbb")
 	
 	tween.queue_free()
 	
