@@ -91,9 +91,14 @@ func _ready():
 	$MarginContainer/RichTextLabel.percent_visible = 0.0
 
 func start(action, player):
-	$SoundEffectPlayer.play()
 	var contents = self.player_contents if player else enemy_contents
 	var content = I18n.translate(contents[action.id][randi() % len(contents[action.id])])
+	
+	self.start_custom(content, 0.5)
+
+
+func start_custom(content, delay = 2.0):
+	$SoundEffectPlayer.play()
 	$MarginContainer/RichTextLabel.text = content
 	
 	var tween = Tween.new()
@@ -109,7 +114,7 @@ func start(action, player):
 	tween.start()
 	yield(tween, "tween_all_completed")
 	$SoundEffectPlayer.stop()
-	yield(self.get_tree().create_timer(0.5), "timeout")
+	yield(self.get_tree().create_timer(delay), "timeout")
 	
 	tween.interpolate_property(self, "modulate", self.modulate, Color("#00ffffff"), 0.2, Tween.TRANS_CUBIC, Tween.EASE_IN_OUT)
 	tween.start()

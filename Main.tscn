@@ -655,6 +655,7 @@ position = Vector2( 537, 464 )
 scale = Vector2( 4, 4 )
 frames = SubResource( 86 )
 animation = "lde"
+frame = 1
 playing = true
 
 [node name="Ghost" type="AnimatedSprite" parent="."]
@@ -662,7 +663,6 @@ position = Vector2( 746, 341 )
 scale = Vector2( 4, 4 )
 frames = SubResource( 85 )
 animation = "lde"
-frame = 1
 playing = true
 
 [node name="BgmPlayer" type="AudioStreamPlayer" parent="."]

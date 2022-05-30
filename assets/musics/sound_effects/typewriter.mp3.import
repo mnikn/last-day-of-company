@@ -1,0 +1,15 @@
+[remap]
+
+importer="mp3"
+type="AudioStreamMP3"
+path="res://.import/typewriter.mp3-678ed6cb2f4a7ae125f3e6a8cb19d80f.mp3str"
+
+[deps]
+
+source_file="res://assets/musics/sound_effects/typewriter.mp3"
+dest_files=[ "res://.import/typewriter.mp3-678ed6cb2f4a7ae125f3e6a8cb19d80f.mp3str" ]
+
+[params]
+
+loop=true
+loop_offset=0

@@ -28,12 +28,18 @@ _global_script_classes=[ {
 "class": "NodeUtils",
 "language": "GDScript",
 "path": "res://utils/Node.gd"
+}, {
+"base": "Node",
+"class": "TweenUtils",
+"language": "GDScript",
+"path": "res://utils/Tween.gd"
 } ]
 _global_script_class_icons={
 "ArrayUtils": "",
 "DictUtils": "",
 "JsonUtils": "",
-"NodeUtils": ""
+"NodeUtils": "",
+"TweenUtils": ""
 }
 
 [application]
@@ -45,6 +51,7 @@ config/icon="res://icon.png"
 [autoload]
 
 I18n="*res://platforms/I18n.gd"
+SceneChanger="*res://platforms/SceneChanger.tscn"
 
 [display]
 
