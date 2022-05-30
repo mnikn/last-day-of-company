@@ -1,41 +1,81 @@
-[gd_scene load_steps=12 format=2]
+[gd_scene load_steps=21 format=2]
 
 [ext_resource path="res://Opening2.gd" type="Script" id=1]
 [ext_resource path="res://ui/Dialogue.tscn" type="PackedScene" id=2]
 [ext_resource path="res://assets/ui/scene/scene.png" type="Texture" id=3]
 [ext_resource path="res://assets/ui/sprites/player/idle.png" type="Texture" id=4]
 [ext_resource path="res://assets/ui/sprites/ghost/idle.png" type="Texture" id=5]
+[ext_resource path="res://assets/ui/sprites/ghost/dead.png" type="Texture" id=6]
+[ext_resource path="res://assets/ui/sprites/player/dead.png" type="Texture" id=7]
 
-[sub_resource type="AtlasTexture" id=82]
+[sub_resource type="AtlasTexture" id=105]
 atlas = ExtResource( 4 )
-region = Rect2( 0, 0, 16, 35 )
+region = Rect2( 0, 0, 64, 64 )
 
-[sub_resource type="AtlasTexture" id=83]
+[sub_resource type="AtlasTexture" id=106]
 atlas = ExtResource( 4 )
-region = Rect2( 16, 0, 16, 35 )
+region = Rect2( 64, 0, 64, 64 )
+
+[sub_resource type="AtlasTexture" id=107]
+atlas = ExtResource( 7 )
+region = Rect2( 0, 0, 64, 64 )
+
+[sub_resource type="AtlasTexture" id=108]
+atlas = ExtResource( 7 )
+region = Rect2( 64, 0, 64, 64 )
 
 [sub_resource type="SpriteFrames" id=86]
 animations = [ {
-"frames": [ SubResource( 82 ), SubResource( 83 ) ],
+"frames": [ SubResource( 105 ), SubResource( 106 ) ],
 "loop": true,
-"name": "lde",
+"name": "idle",
 "speed": 2.0
+}, {
+"frames": [ SubResource( 107 ), SubResource( 108 ) ],
+"loop": false,
+"name": "dead",
+"speed": 4.0
 } ]
 
-[sub_resource type="AtlasTexture" id=87]
+[sub_resource type="AtlasTexture" id=98]
 atlas = ExtResource( 5 )
-region = Rect2( 0, 0, 25, 27 )
+region = Rect2( 0, 0, 64, 64 )
 
-[sub_resource type="AtlasTexture" id=88]
+[sub_resource type="AtlasTexture" id=99]
 atlas = ExtResource( 5 )
-region = Rect2( 25, 0, 25, 27 )
+region = Rect2( 64, 0, 64, 64 )
+
+[sub_resource type="AtlasTexture" id=100]
+atlas = ExtResource( 6 )
+region = Rect2( 0, 0, 64, 64 )
+
+[sub_resource type="AtlasTexture" id=101]
+atlas = ExtResource( 6 )
+region = Rect2( 64, 0, 64, 64 )
+
+[sub_resource type="AtlasTexture" id=102]
+atlas = ExtResource( 6 )
+region = Rect2( 128, 0, 64, 64 )
+
+[sub_resource type="AtlasTexture" id=103]
+atlas = ExtResource( 6 )
+region = Rect2( 192, 0, 64, 64 )
+
+[sub_resource type="AtlasTexture" id=104]
+atlas = ExtResource( 6 )
+region = Rect2( 256, 0, 64, 64 )
 
 [sub_resource type="SpriteFrames" id=85]
 animations = [ {
-"frames": [ SubResource( 87 ), SubResource( 88 ) ],
+"frames": [ SubResource( 98 ), SubResource( 99 ) ],
 "loop": true,
-"name": "lde",
+"name": "idle",
 "speed": 2.0
+}, {
+"frames": [ SubResource( 100 ), SubResource( 101 ), SubResource( 102 ), SubResource( 103 ), SubResource( 104 ) ],
+"loop": false,
+"name": "dead",
+"speed": 10.0
 } ]
 
 [node name="Opening2" type="Node2D"]
@@ -74,19 +114,19 @@ __meta__ = {
 position = Vector2( 515, 400 )
 scale = Vector2( 4, 4 )
 frames = SubResource( 86 )
-animation = "lde"
+animation = "idle"
 playing = true
 
 [node name="Ghost" type="AnimatedSprite" parent="."]
-position = Vector2( 688, 282 )
+position = Vector2( 687, 297 )
 scale = Vector2( 4, 4 )
 frames = SubResource( 85 )
-animation = "lde"
+animation = "idle"
 frame = 1
 playing = true
 
 [node name="Dialogue" parent="." instance=ExtResource( 2 )]
-margin_left = 559.0
-margin_top = 146.0
-margin_right = 799.0
-margin_bottom = 226.0
+margin_left = 397.0
+margin_top = 256.0
+margin_right = 637.0
+margin_bottom = 336.0

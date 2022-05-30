@@ -1,4 +1,4 @@
-[gd_scene load_steps=30 format=2]
+[gd_scene load_steps=40 format=2]
 
 [ext_resource path="res://ui/BgBlock.tscn" type="PackedScene" id=1]
 [ext_resource path="res://assets/ui/scene/scene.png" type="Texture" id=2]
@@ -12,6 +12,8 @@
 [ext_resource path="res://assets/ui/sprites/player/idle.png" type="Texture" id=10]
 [ext_resource path="res://assets/ui/sprites/ghost/idle.png" type="Texture" id=11]
 [ext_resource path="res://Main.gd" type="Script" id=12]
+[ext_resource path="res://assets/ui/sprites/ghost/dead.png" type="Texture" id=13]
+[ext_resource path="res://assets/ui/sprites/player/dead.png" type="Texture" id=14]
 
 [sub_resource type="Shader" id=1]
 code = "shader_type canvas_item;
@@ -385,37 +387,81 @@ shader_param/base_col = Color( 0.419608, 0.188235, 0.109804, 1 )
 shader_param/resolution = Vector2( 130, 32 )
 shader_param/radius = 0.2
 
-[sub_resource type="AtlasTexture" id=82]
+[sub_resource type="AtlasTexture" id=105]
 atlas = ExtResource( 10 )
-region = Rect2( 0, 0, 16, 35 )
+region = Rect2( 0, 0, 64, 64 )
 
-[sub_resource type="AtlasTexture" id=83]
+[sub_resource type="AtlasTexture" id=106]
 atlas = ExtResource( 10 )
-region = Rect2( 16, 0, 16, 35 )
+region = Rect2( 64, 0, 64, 64 )
+
+[sub_resource type="AtlasTexture" id=107]
+atlas = ExtResource( 14 )
+region = Rect2( 0, 0, 64, 64 )
+
+[sub_resource type="AtlasTexture" id=108]
+atlas = ExtResource( 14 )
+region = Rect2( 64, 0, 64, 64 )
 
 [sub_resource type="SpriteFrames" id=86]
 animations = [ {
-"frames": [ SubResource( 82 ), SubResource( 83 ) ],
+"frames": [ SubResource( 105 ), SubResource( 106 ) ],
 "loop": true,
-"name": "lde",
+"name": "idle",
 "speed": 2.0
+}, {
+"frames": [ SubResource( 107 ), SubResource( 108 ) ],
+"loop": false,
+"name": "dead",
+"speed": 4.0
 } ]
 
-[sub_resource type="AtlasTexture" id=87]
+[sub_resource type="AtlasTexture" id=98]
 atlas = ExtResource( 11 )
-region = Rect2( 0, 0, 25, 27 )
+region = Rect2( 0, 0, 64, 64 )
 
-[sub_resource type="AtlasTexture" id=88]
+[sub_resource type="AtlasTexture" id=99]
 atlas = ExtResource( 11 )
-region = Rect2( 25, 0, 25, 27 )
+region = Rect2( 64, 0, 64, 64 )
+
+[sub_resource type="AtlasTexture" id=100]
+atlas = ExtResource( 13 )
+region = Rect2( 0, 0, 64, 64 )
+
+[sub_resource type="AtlasTexture" id=101]
+atlas = ExtResource( 13 )
+region = Rect2( 64, 0, 64, 64 )
+
+[sub_resource type="AtlasTexture" id=102]
+atlas = ExtResource( 13 )
+region = Rect2( 128, 0, 64, 64 )
+
+[sub_resource type="AtlasTexture" id=103]
+atlas = ExtResource( 13 )
+region = Rect2( 192, 0, 64, 64 )
+
+[sub_resource type="AtlasTexture" id=104]
+atlas = ExtResource( 13 )
+region = Rect2( 256, 0, 64, 64 )
 
 [sub_resource type="SpriteFrames" id=85]
 animations = [ {
-"frames": [ SubResource( 87 ), SubResource( 88 ) ],
+"frames": [ SubResource( 98 ), SubResource( 99 ) ],
 "loop": true,
-"name": "lde",
+"name": "idle",
 "speed": 2.0
+}, {
+"frames": [ SubResource( 100 ), SubResource( 101 ), SubResource( 102 ), SubResource( 103 ), SubResource( 104 ) ],
+"loop": false,
+"name": "dead",
+"speed": 10.0
 } ]
+
+[sub_resource type="DynamicFont" id=109]
+size = 120
+outline_size = 4
+outline_color = Color( 0, 0, 0, 1 )
+font_data = ExtResource( 6 )
 
 [node name="Main" type="Node2D"]
 script = ExtResource( 12 )
@@ -654,16 +700,33 @@ margin_bottom = 164.0
 position = Vector2( 537, 464 )
 scale = Vector2( 4, 4 )
 frames = SubResource( 86 )
-animation = "lde"
+animation = "idle"
 frame = 1
 playing = true
 
 [node name="Ghost" type="AnimatedSprite" parent="."]
-position = Vector2( 746, 341 )
+position = Vector2( 742, 357 )
 scale = Vector2( 4, 4 )
 frames = SubResource( 85 )
-animation = "lde"
+animation = "idle"
 playing = true
+
+[node name="ResultText" type="RichTextLabel" parent="."]
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+margin_left = 411.0
+margin_top = 306.0
+margin_right = 903.0
+margin_bottom = 427.0
+custom_colors/default_color = Color( 1, 0.831373, 0.180392, 1 )
+custom_fonts/normal_font = SubResource( 109 )
+bbcode_enabled = true
+bbcode_text = "[center]YOU LOST![/center]"
+text = "YOU LOST!"
+fit_content_height = true
+scroll_active = false
 
 [node name="BgmPlayer" type="AudioStreamPlayer" parent="."]
 stream = ExtResource( 7 )

@@ -55,7 +55,7 @@ func start():
 	$Scene.animation = "ghost_1"
 	$Scene.play()
 	yield($Scene, "animation_finished")
-	
+		
 	$Dialogue.rect_global_position = Vector2(648, 264)
 	yield($Dialogue.start_custom("可以缓冲一个月时间让我们找工作吗?"), "completed")
 	$Dialogue.rect_global_position = Vector2(790, 55)

@@ -14,6 +14,7 @@ var current_term_key_action = ""
 
 # Called when the node enters the scene tree for the first time.
 func _ready():
+	$ResultText.rect_global_position = Vector2(411, -400)
 	randomize()
 	self.actions = JsonUtils.load_json_file("res://data/action.json")
 	self.next_term()
@@ -255,7 +256,8 @@ func lost_hp_val(node):
 		tween.start()
 		yield(tween, "tween_all_completed")
 		i += 1
-		
+	
+#	node.val = 0.2
 	tween.interpolate_property(node, "val", node.val, node.val - 0.2, 0.3,Tween.TRANS_CUBIC, Tween.EASE_IN_OUT)
 	tween.start()
 	yield(tween, "tween_all_completed")
@@ -270,6 +272,35 @@ func lost_hp_val(node):
 		tween.start()
 		yield(tween, "tween_all_completed")
 #		$UI/Bg.modulate = Color("#ffbbbb")
+	
+	
+	if node.val - 0.2 <= 0:
+		$UI/PlayerActionPanel.visible = false
+		$UI/EmenyPanel.visible = false
+		if sprite_node == $Ghost:
+			yield(TweenUtils.audio_fade_out($BgmPlayer, 0.2), "completed")
+			$BgmPlayer.stream = load("res://assets/musics/win_bgm.wav")
+			$BgmPlayer.pitch_scale = 1.0
+			$BgmPlayer.volume_db = 1.0
+			$BgmPlayer.play()
+		sprite_node.animation = "dead"
+		sprite_node.play()
+		yield(sprite_node, "animation_finished")
+		
+		if sprite_node == $Ghost:
+			$ResultText.bbcode_text = "[center]YOU WIN![/center]"
+		else:
+			$ResultText.bbcode_text = "[center]YOU LOSE![/center]"
+		
+		$ResultText.rect_global_position = Vector2(411, -400)
+		tween.interpolate_property($ResultText, "rect_global_position", $ResultText.rect_global_position, Vector2(411, 306), 0.5, Tween.TRANS_CUBIC, Tween.EASE_IN_OUT)
+		tween.start()
+		yield(tween, "tween_all_completed")
+		yield(self.get_tree().create_timer(3.0), "timeout")
+		if sprite_node == $Ghost:
+			SceneChanger.change_scene("res://Main.tscn")
+		else:
+			SceneChanger.change_scene("res://Main.tscn")
 	
 	tween.queue_free()
 	

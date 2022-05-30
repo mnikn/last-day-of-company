@@ -13,7 +13,7 @@ func _ready():
 
 
 func start():
-	$Dialogue.rect_global_position = Vector2(395, 245)
+	$Dialogue.rect_global_position = Vector2(397, 256)
 	yield($Dialogue.start_custom("朋友虽然你逝世了也被裁了."), "completed")
 	yield($Dialogue.start_custom("但是我还需要在这里工作,一些工作上的东西能不能交接一下?"), "completed")
 	
@@ -21,7 +21,7 @@ func start():
 	yield($Dialogue.start_custom("不,我选择摸鱼."), "completed")
 	yield($Dialogue.start_custom("公司欺人太甚!"), "completed")
 	
-	$Dialogue.rect_global_position = Vector2(395, 245)
+	$Dialogue.rect_global_position = Vector2(397, 256)
 	yield($Dialogue.start_custom("....(干!!看来需要一番战斗才能完成交接了)"), "completed")
 
 	SceneChanger.change_scene("res://Main.tscn")
