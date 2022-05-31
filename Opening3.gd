@@ -18,7 +18,7 @@ func start():
 	yield($Dialogue.start_custom("接下来,你能不能协助我完成下交接?"), "completed")
 	
 	$Dialogue.rect_global_position = Vector2(559, 146)
-	yield($Dialogue.start_custom("交接个鬼!."), "completed")
+	yield($Dialogue.start_custom("交接个鬼!"), "completed")
 	yield($Dialogue.start_custom("我要摸鱼摸到天荒地老!"), "completed")
 	
 	$Dialogue.rect_global_position = Vector2(397, 256)

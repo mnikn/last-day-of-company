@@ -208,6 +208,7 @@ shader_param/radius = 0.2
 
 [node name="StoryCombat2" instance=ExtResource( 1 )]
 difficult_coff = 4
+win_target_scene = "res://Opening4.tscn"
 
 [node name="HpBar" parent="UI/Top/MarginContainer/HBoxContainer/Player" index="1"]
 material = SubResource( 33 )
@@ -220,3 +221,4 @@ material = SubResource( 35 )
 
 [node name="Ghost" parent="." index="2"]
 modulate = Color( 0.631373, 0.952941, 1, 1 )
+frame = 0

@@ -206,8 +206,9 @@ shader_param/base_col = Color( 0.419608, 0.188235, 0.109804, 1 )
 shader_param/resolution = Vector2( 130, 32 )
 shader_param/radius = 0.2
 
-[node name="StoryCombat1" instance=ExtResource( 1 )]
-win_target_scene = "res://Opening3.tscn"
+[node name="StoryCombat3" instance=ExtResource( 1 )]
+difficult_coff = 6
+win_target_scene = "res://Opening5.tscn"
 
 [node name="HpBar" parent="UI/Top/MarginContainer/HBoxContainer/Player" index="1"]
 material = SubResource( 33 )
@@ -218,5 +219,5 @@ material = SubResource( 34 )
 [node name="StackItem" parent="UI/ActionStack/MarginContainer/VBoxContainer" index="0"]
 material = SubResource( 35 )
 
-[node name="Player" parent="." index="1"]
-frame = 0
+[node name="Ghost" parent="." index="2"]
+modulate = Color( 0.933333, 0.345098, 0.984314, 1 )

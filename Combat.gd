@@ -258,10 +258,11 @@ func lost_hp_val(node):
 	else:
 		sprite_node = $Player
 	while i < 2:
-		tween.interpolate_property(sprite_node, "modulate", Color("#ffffff"), Color("#ff2c2c"), 0.05, Tween.TRANS_CUBIC, Tween.EASE_IN_OUT)
+		var origin_val = sprite_node.modulate
+		tween.interpolate_property(sprite_node, "modulate", origin_val, Color("#ff2c2c"), 0.05, Tween.TRANS_CUBIC, Tween.EASE_IN_OUT)
 		tween.start()
 		yield(tween, "tween_all_completed")
-		tween.interpolate_property(sprite_node, "modulate", Color("ff2c2c"), Color("#ffffff"), 0.05, Tween.TRANS_CUBIC, Tween.EASE_IN_OUT)
+		tween.interpolate_property(sprite_node, "modulate", Color("ff2c2c"), origin_val, 0.05, Tween.TRANS_CUBIC, Tween.EASE_IN_OUT)
 		tween.start()
 		yield(tween, "tween_all_completed")
 		i += 1
