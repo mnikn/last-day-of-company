@@ -93,6 +93,7 @@ position = Vector2( 515, 400 )
 scale = Vector2( 4, 4 )
 frames = SubResource( 86 )
 animation = "idle"
+frame = 1
 playing = true
 
 [node name="Boss" type="AnimatedSprite" parent="."]
