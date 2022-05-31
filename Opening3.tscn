@@ -101,6 +101,7 @@ position = Vector2( 515, 400 )
 scale = Vector2( 4, 4 )
 frames = SubResource( 86 )
 animation = "idle"
+frame = 1
 playing = true
 
 [node name="Ghost" type="AnimatedSprite" parent="."]
@@ -109,6 +110,7 @@ position = Vector2( 687, 297 )
 scale = Vector2( 4, 4 )
 frames = SubResource( 85 )
 animation = "idle"
+frame = 1
 playing = true
 
 [node name="Dialogue" parent="." instance=ExtResource( 2 )]

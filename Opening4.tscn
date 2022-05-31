@@ -1,4 +1,4 @@
-[gd_scene load_steps=21 format=2]
+[gd_scene load_steps=18 format=2]
 
 [ext_resource path="res://Opening4.gd" type="Script" id=1]
 [ext_resource path="res://ui/Dialogue.tscn" type="PackedScene" id=2]
@@ -6,35 +6,21 @@
 [ext_resource path="res://assets/ui/sprites/player/idle.png" type="Texture" id=4]
 [ext_resource path="res://assets/ui/sprites/ghost/idle.png" type="Texture" id=5]
 [ext_resource path="res://assets/ui/sprites/ghost/dead.png" type="Texture" id=6]
-[ext_resource path="res://assets/ui/sprites/player/dead.png" type="Texture" id=7]
 
-[sub_resource type="AtlasTexture" id=105]
+[sub_resource type="AtlasTexture" id=109]
 atlas = ExtResource( 4 )
-region = Rect2( 0, 0, 64, 64 )
+region = Rect2( 0, 0, 120, 120 )
 
-[sub_resource type="AtlasTexture" id=106]
+[sub_resource type="AtlasTexture" id=110]
 atlas = ExtResource( 4 )
-region = Rect2( 64, 0, 64, 64 )
-
-[sub_resource type="AtlasTexture" id=107]
-atlas = ExtResource( 7 )
-region = Rect2( 0, 0, 64, 64 )
-
-[sub_resource type="AtlasTexture" id=108]
-atlas = ExtResource( 7 )
-region = Rect2( 64, 0, 64, 64 )
+region = Rect2( 120, 0, 120, 120 )
 
 [sub_resource type="SpriteFrames" id=86]
 animations = [ {
-"frames": [ SubResource( 105 ), SubResource( 106 ) ],
+"frames": [ SubResource( 109 ), SubResource( 110 ) ],
 "loop": true,
 "name": "idle",
 "speed": 2.0
-}, {
-"frames": [ SubResource( 107 ), SubResource( 108 ) ],
-"loop": false,
-"name": "dead",
-"speed": 4.0
 } ]
 
 [sub_resource type="AtlasTexture" id=98]
@@ -115,6 +101,7 @@ position = Vector2( 515, 400 )
 scale = Vector2( 4, 4 )
 frames = SubResource( 86 )
 animation = "idle"
+frame = 1
 playing = true
 
 [node name="Ghost" type="AnimatedSprite" parent="."]
@@ -123,7 +110,6 @@ position = Vector2( 687, 297 )
 scale = Vector2( 4, 4 )
 frames = SubResource( 85 )
 animation = "idle"
-frame = 1
 playing = true
 
 [node name="Dialogue" parent="." instance=ExtResource( 2 )]

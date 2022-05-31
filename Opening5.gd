@@ -25,5 +25,17 @@ func start():
 	$Dialogue.rect_global_position = Vector2(397, 256)
 	yield($Dialogue.start_custom("...他奶奶的,给我玩阴的是吧!"), "completed")
 	yield($Dialogue.start_custom("我选择直接去世!"), "completed")
+	
+	$Player.animation = "dead"
+	$Player.play()
+	yield($Player, "animation_finished")
+	
+	yield(self.get_tree().create_timer(1.0), "timeout")
+	$Dialogue.rect_global_position = Vector2(552, 190)
+	yield($Dialogue.start_custom("呵呵,这下裁员目标终于完成了."), "completed")
+	
+	$Dialogue.start_custom("既然完成了,接下来去找老板要个加薪吧....", 10.0)
+	
+	yield(self.get_tree().create_timer(4.0), "timeout")
 
-	SceneChanger.change_scene("res://StoryCombat3.tscn")
+	SceneChanger.change_scene("res://End.tscn")
