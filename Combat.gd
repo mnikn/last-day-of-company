@@ -12,14 +12,21 @@ var DialogueScene = preload("res://ui/Dialogue.tscn")
 var actions = []
 var current_term_key_action = ""
 
+export var difficult_coff = 2
+export (String, FILE) var win_target_scene = ""
+
 # Called when the node enters the scene tree for the first time.
 func _ready():
 	$ResultText.rect_global_position = Vector2(411, -400)
 	randomize()
 	self.actions = JsonUtils.load_json_file("res://data/action.json")
+	self.start()
+	
+func start():
 	self.next_term()
 
 func next_term():
+	print_debug("next_term_start")
 	var tween = Tween.new()
 	self.add_child(tween)
 	for node in $UI/PlayerActionPanel.get_children():
@@ -38,7 +45,8 @@ func next_term():
 	var normal_actions = ArrayUtils.map(ArrayUtils.filter(actions, { "type": "normal" }), "id")
 	current_term_key_action = normal_actions[randi() % len(normal_actions)]
 	$UI/TermKeyPanel/Label.text = I18n.translate(ArrayUtils.find(actions, { "id": self.current_term_key_action }).name)
-
+	print_debug("next_term_end")
+	
 func generate_player_actions():
 	NodeUtils.clear_children($UI/PlayerActionPanel)
 	var player_action = []
@@ -83,7 +91,6 @@ func generate_player_actions():
 	tween.queue_free()
 	
 func generate_enemy_actions():
-	var difficult_coff = 2
 	
 	NodeUtils.clear_children($UI/EmenyPanel)
 	var player_action = []
@@ -95,8 +102,10 @@ func generate_enemy_actions():
 	var r2 = normal_actions[randi() % len(normal_actions)]
 	
 	player_action.append_array(normal_actions)
-#	player_action.insert(player_action.find(r1), r1)
-#	player_action.insert(player_action.find(r2), r2)
+	if difficult_coff >= 4:
+		player_action.insert(player_action.find(r1), r1)
+	if difficult_coff >= 6:
+		player_action.insert(player_action.find(r2), r2)
 	
 	player_action.push_back(special_actions[randi() % len(special_actions)])
 	
@@ -298,9 +307,10 @@ func lost_hp_val(node):
 		yield(tween, "tween_all_completed")
 		yield(self.get_tree().create_timer(3.0), "timeout")
 		if sprite_node == $Ghost:
-			SceneChanger.change_scene("res://Main.tscn")
+			SceneChanger.change_scene(win_target_scene)
 		else:
-			SceneChanger.change_scene("res://Main.tscn")
+#			self.get_tree().reload_current_scene()
+			SceneChanger.change_scene(get_tree().current_scene.filename)
 	
 	tween.queue_free()
 	

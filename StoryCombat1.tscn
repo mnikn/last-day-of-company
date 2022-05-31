@@ -1,0 +1,219 @@
+[gd_scene load_steps=7 format=2]
+
+[ext_resource path="res://Combat.tscn" type="PackedScene" id=1]
+
+[sub_resource type="Shader" id=1]
+code = "shader_type canvas_item;
+
+uniform vec4 base_color: hint_color = vec4(1.0, 0.2, 0.1, 1.0);
+uniform vec2 resolution = vec2(492.0, 40.0);
+uniform bool flip = false;
+
+uniform float val: hint_range(0.0, 1.0) = 1.0;
+
+float sat(float t) {
+    return clamp(t, 0.0, 1.0);
+}
+
+float remap01(float a, float b, float t) {
+    return sat((t - a) / (b - a));
+}
+
+float remap(float a, float b, float c, float d, float t) {
+    return remap01(a, b, t) * (d - c) + c;
+}
+
+
+float rect(vec2 uv, vec2 size) {
+    float blur = 0.000;
+    // 让 size 成正比
+    size = 0.5 - size * 0.5;
+    // 先画一边
+    vec2 r = vec2(step(size.x, uv.x), step(size.y, uv.y));
+    // 再画相反的边，相乘得出相交位置就是对应的矩形
+    r *= vec2(step(size.x, 1.0 - uv.x), step(size.y, 1.0 - uv.y));
+    // x 和 y 相乘得出矩形的像素点值
+    return r.x * r.y;
+}
+
+float circle(vec2 uv, float r, vec2 arg_resoulation) {
+    uv -= 0.5;
+//	resolution = vec2(492, 40);	
+//    uv.x *= iResolution.x / iResolution.y;
+	uv.x *= arg_resoulation.x / arg_resoulation.y;
+    float blur = 0.005;
+    
+    // 用 uv 做长度,点距离零点的距离会呈圆形递增
+    float d = length(uv);
+    d = step(d, r);
+    return d;
+}
+
+float round_rect(vec2 uv, vec2 arg_resoulation) {    
+    float radius = 0.5;
+    float c1 = circle(vec2(uv.x+0.45, uv.y), radius, arg_resoulation);
+    float c2 = circle(vec2(uv.x-0.45, uv.y), radius, arg_resoulation);
+    
+//    float r = rect(vec2(uv.x, uv.y), vec2(size.x-radius, size.y));
+    float r = rect(vec2(uv.x, uv.y), vec2(0.9, 1.0));
+	
+	float res = c1+c2+r;
+//	float res = r;
+
+    return min(res, 1.0);
+}
+
+void fragment()
+{
+    // Normalized pixel coordinates (from 0 to 1)
+    vec2 uv = UV;
+	if (flip) {
+		uv.x = 1.0 - uv.x;
+	}
+	
+	vec4 col = base_color;
+    
+    vec2 size = vec2(1.0, 1.0);
+    
+    
+    float t = round_rect(uv, resolution);
+    col.a = t;
+	
+	// outline
+	float offset = 0.005;
+	uv.y *= 1.05;
+	uv.x += offset;
+	float t2 = round_rect(uv*(1.0 + offset) - offset / 2.0, resolution);
+	col.rgb = mix(col.rgb, col.rgb * 0.2, 1.0 - t2);
+	
+	// lost
+	float l = smoothstep(val, val + 0.0005, uv.x);
+    col.rgb = mix(col.rgb, col.rgb * 0.2, l);
+	
+	// highlight
+    float hy = uv.y;
+    hy += sin(TIME*6.+uv.x*12.0) * sin(TIME*3.0) * 0.2;
+    float highlight = smoothstep(0.6, 0.6, hy);
+    highlight *= 3.0;
+    if (hy <= 0.3 && uv.x >= l) {
+        col.rgb *= 1.5;
+    }
+
+    // Output to screen
+    COLOR = col;
+}"
+
+[sub_resource type="ShaderMaterial" id=33]
+resource_local_to_scene = true
+shader = SubResource( 1 )
+shader_param/base_color = Color( 0.763672, 0.207974, 0.207974, 1 )
+shader_param/resolution = Vector2( 490, 48 )
+shader_param/flip = false
+shader_param/val = 1.0
+
+[sub_resource type="ShaderMaterial" id=34]
+resource_local_to_scene = true
+shader = SubResource( 1 )
+shader_param/base_color = Color( 0.763672, 0.207974, 0.207974, 1 )
+shader_param/resolution = Vector2( 490, 48 )
+shader_param/flip = true
+shader_param/val = 1.0
+
+[sub_resource type="Shader" id=32]
+code = "shader_type canvas_item;
+
+uniform vec4 base_col: hint_color = vec4(0.27, 0.14, 0.05, 1.0);
+uniform vec2 resolution = vec2(256.0, 64.0);
+uniform float radius = 0.2;
+
+float sat(float t) {
+    return clamp(t, 0.0, 1.0);
+}
+
+float remap01(float a, float b, float t) {
+    return sat((t - a) / (b - a));
+}
+
+float remap(float a, float b, float c, float d, float t) {
+    return remap01(a, b, t) * (d - c) + c;
+}
+
+float rect(vec2 uv, vec2 size) {
+    float blur = 0.000;
+    // 让 size 成正比
+    size = 0.5 - size * 0.5;
+    // 先画一边
+    vec2 r = vec2(step(size.x, uv.x), step(size.y, uv.y));
+    // 再画相反的边，相乘得出相交位置就是对应的矩形
+    r *= vec2(step(size.x, 1.0 - uv.x), step(size.y, 1.0 - uv.y));
+    // x 和 y 相乘得出矩形的像素点值
+    return r.x * r.y;
+}
+
+float circle(vec2 uv, float r) {
+    uv -= 0.5;
+    uv.x *= resolution.x / resolution.y;
+    float blur = 0.005;
+    
+    // 用 uv 做长度,点距离零点的距离会呈圆形递增
+    float d = length(uv);
+    d = step(d, r);
+    return d;
+}
+
+
+float round_rect(vec2 uv, float r) {
+	float c1 = circle(uv+0.5-r, r);
+	float c2 = circle(uv-0.5+r, r);
+	float c3 = circle(vec2(uv.x+0.5-r, uv.y-0.5+r), r);
+	float c4 = circle(vec2(uv.x-0.5+r, uv.y+0.5-r), r);
+
+	float rect1 = rect(uv, vec2(1.0 - r * 1.5, 1.0 - r * 2.0));
+	float rect2 = rect(uv, vec2(1.0- r *2.0, 1.0));
+
+	float s = min(c1+c2+c3+c4+rect1+rect2, 1.0);
+	return s;
+}
+
+void fragment() {
+	vec4 col = vec4(0.27, 0.14, 0.01, 1.0);
+	vec2 uv = UV;
+
+	float s = round_rect(uv, radius);
+	col.a = s;
+	
+	
+	float offset = 0.12;
+	s = round_rect(uv*(1.0 + offset) - offset / 2.0, radius);
+	col.rgb = mix(col.rgb, vec3(0.86, 0.59, 0.52), s);
+	
+	offset = 0.2;
+	uv.y = uv.y * 0.7 + 0.15;
+	s = rect(uv*(1.0 + offset) - offset / 2.0, vec2(0.7));
+	col.rgb = mix(col.rgb, vec3(0.27, 0.14, 0.01), s);
+//	uv *= 1.5;
+//	uv -= 0.5;
+//	s = round_rect(uv, radius);
+//	col.rgb = mix(col.rgb, col.rgb*1.5, 1.0 - s); 
+	
+	COLOR = col;
+}"
+
+[sub_resource type="ShaderMaterial" id=35]
+resource_local_to_scene = true
+shader = SubResource( 32 )
+shader_param/base_col = Color( 0.419608, 0.188235, 0.109804, 1 )
+shader_param/resolution = Vector2( 130, 32 )
+shader_param/radius = 0.2
+
+[node name="StoryCombat1" instance=ExtResource( 1 )]
+win_target_scene = "res://Opening3.tscn"
+
+[node name="HpBar" parent="UI/Top/MarginContainer/HBoxContainer/Player" index="1"]
+material = SubResource( 33 )
+
+[node name="HpBar" parent="UI/Top/MarginContainer/HBoxContainer/Enemy" index="0"]
+material = SubResource( 34 )
+
+[node name="StackItem" parent="UI/ActionStack/MarginContainer/VBoxContainer" index="0"]
+material = SubResource( 35 )

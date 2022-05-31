@@ -67,5 +67,3 @@ func _on_Action_gui_input(event):
 			
 			$SoundEffectPlayer.stream = load("res://assets/musics/sound_effects/action_clicked.wav")
 			$SoundEffectPlayer.play()
-			
-			print_debug("action triggered")

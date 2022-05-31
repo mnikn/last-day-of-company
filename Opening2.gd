@@ -24,4 +24,4 @@ func start():
 	$Dialogue.rect_global_position = Vector2(397, 256)
 	yield($Dialogue.start_custom("....(干!!看来需要一番战斗才能完成交接了)"), "completed")
 
-	SceneChanger.change_scene("res://Main.tscn")
+	SceneChanger.change_scene("res://StoryCombat1.tscn")
